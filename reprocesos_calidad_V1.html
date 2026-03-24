@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛠️ Sistema de Gestión de Reprocesos - Riduco</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        .autocomplete-suggestions, .codigo-sugerencias {
+            position: absolute;
+            background: white;
+            border: 2px solid #10b981;
+            border-top: none;
+            border-radius: 0 0 0.5rem 0.5rem;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: 100%;
+            box-shadow: 0 10px 15px -3px rgba(0, 0,0,0.1);
+        }
+        .autocomplete-item, .codigo-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.2s;
+        }
+        .autocomplete-item:hover, .codigo-item:hover, 
+        .autocomplete-item.selected, .codigo-item.selected {
+            background-color: #ecfdf5;
+        }
+        .autocomplete-item:last-child, .codigo-item:last-child {
+            border-bottom: none;
+        }
+        .input-pequeño { max-width: 180px; }
+        .seccion { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); }
+        .input-group { background: white; padding: 1.5rem; border-radius: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card-stats { transition: transform 0.2s, box-shadow 0.2s; }
+        .card-stats:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 via-green-50 to-white min-h-screen py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- 🏠 HEADER PRINCIPAL -->
+        <div class="text-center mb-10">
+            <div class="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-8 py-12 rounded-3xl shadow-2xl">
+                <div class="text-5xl mb-4">🛠️</div>
+                <h1 class="text-4xl md:text-5xl font-black tracking-tight mb-3">Sistema de Gestión</h1>
+                <h1 class="text-3xl md:text-4xl font-black bg-gradient-to-r from-white to-emerald-100 bg-clip-text text-transparent mb-4">de Reprocesos</h1>
+                <p class="text-xl opacity-90 font-medium">Control preciso de costos y seguimiento - Riduco</p>
+            </div>
+        </div>
+
+        <!-- 📊 DASHBOARD DE ESTADÍSTICAS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="card-stats bg-gradient-to-br from-emerald-500 to-green-600 text-white p-8 rounded-2xl shadow-xl">
+                <div class="text-3xl mb-2">📋</div>
+                <div class="text-4xl font-black" id="statCantidad">0</div>
+                <div class="text-lg font-semibold opacity-90 mt-1">Total Registros</div>
+            </div>
+            <div class="card-stats bg-gradient-to-br from-emerald-400 to-green-500 text-white p-8 rounded-2xl shadow-xl">
+                <div class="text-3xl mb-2">💰</div>
+                <div class="text-4xl font-black" id="statTotal">$0</div>
+                <div class="text-lg font-semibold opacity-90 mt-1">Costo Total</div>
+            </div>
+            <div class="card-stats bg-gradient-to-br from-emerald-600 to-green-700 text-white p-8 rounded-2xl shadow-xl">
+                <div class="text-3xl mb-2">📈</div>
+                <div class="text-4xl font-black" id="statPromedio">$0</div>
+                <div class="text-lg font-semibold opacity-90 mt-1">Promedio/Registro</div>
+            </div>
+        </div>
+
+        <!-- ➕ FORMULARIO PRINCIPAL -->
+        <div class="seccion mb-10">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-emerald-100">
+                <div class="flex items-center mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center text-2xl mr-4 shadow-lg">➕</div>
+                    <h2 class="text-3xl font-black text-gray-900">Nuevo Registro de Reproceso</h2>
+                </div>
+
+                <form id="formRegistro" onsubmit="guardarRegistro(event)" class="space-y-8">
+                    <!-- 👥 INFORMACIÓN GENERAL -->
+                    <div class="input-group">
+                        <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-lg mr-3">👥</div>
+                            Información General
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="relative">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Cliente <span class="text-emerald-600">*</span></label>
+                                <input type="text" id="cliente" required placeholder="Escriba para buscar..."
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold" autocomplete="off" oninput="mostrarSugerencias('cliente')">
+                                <div id="sugerenciasCliente" class="autocomplete-suggestions"></div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Origen Hallazgo <span class="text-emerald-600">*</span></label>
+                                <select id="origenHallazgo" required class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="DEVOLUCION CLIENTE">DEVOLUCIÓN CLIENTE</option>
+                                    <option value="RECLAMO CLIENTE / BODEGA RIDUCO">RECLAMO CLIENTE / BODEGA RIDUCO</option>
+                                    <option value="RECLAMO CLIENTE">RECLAMO CLIENTE</option>
+                                    <option value="PRODUCTO PROCESO">PRODUCTO PROCESO</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Fecha <span class="text-emerald-600">*</span></label>
+                                <input type="date" id="fecha" required class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Tipo Reproceso <span class="text-emerald-600">*</span></label>
+                                <select id="tipoReproceso" required class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+                                    <option value="">Seleccionar...</option>
+                                    <option>Reproceso</option>
+                                    <option>Contención</option>
+                                    <option>Muro</option>
+                                    <option>Scrap</option>
+                                    <option>Retrabajo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ⚠️ DETALLES DEL PROBLEMA -->
+                    <div class="input-group">
+                        <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-lg mr-3">⚠️</div>
+                            Detalles del Problema
+                        </h3>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="relative">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Motivo No Conformidad <span class="text-emerald-600">*</span></label>
+                                <input type="text" id="motivoNoConformidad" required placeholder="Descripción detallada del defecto..."
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold" autocomplete="off" oninput="mostrarSugerencias('motivoNoConformidad')">
+                                <div id="sugerenciasMotivo" class="autocomplete-suggestions"></div>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="relative">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Lotes Afectados</label>
+                                    <input type="text" id="lotesAfectados" placeholder="Ej: Lote 12345, Lote 67890..."
+                                        class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all" autocomplete="off" oninput="mostrarSugerencias('lotesAfectados')">
+                                    <div id="sugerenciasLotes" class="autocomplete-suggestions"></div>
+                                </div>
+                                <div class="relative">
+                                    <label class="block text-sm font-bold text-gray-700 mb-2">Sección Origen Problema</label>
+                                    <input type="text" id="seccionOrigenProblema" placeholder="Ej: Inyección, Empaque, Calidad..."
+                                        class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all" autocomplete="off" oninput="mostrarSugerencias('seccionOrigenProblema')">
+                                    <div id="sugerenciasSeccion" class="autocomplete-suggestions"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">🔍 Unidades a Revisar</label>
+                                <input type="number" id="unidadesRevisar" placeholder="0" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📦 DATOS DE PIEZAS -->
+                    <div class="input-group">
+                        <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-lg mr-3">📦</div>
+                            Datos de Piezas
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div class="relative">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Código Pieza <span class="text-emerald-600">*</span></label>
+                                <input type="text" id="codigoPieza" required placeholder="Ej: 03AUT0045M"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-mono font-semibold text-lg tracking-wider" autocomplete="off" style="text-transform: uppercase;" oninput="autocompletarCodigo();">
+                                <div id="sugerenciasCodigo" class="codigo-sugerencias"></div>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Nombre/Descripción <span class="text-emerald-600">*</span></label>
+                                <input type="text" id="nombrePieza" required placeholder="Descripción completa de la pieza..."
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Costo Unitario ($) <span class="text-emerald-600">*</span></label>
+                                <input type="number" id="costoUnitarioPieza" step="0.01" required placeholder="0.00" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="calcularPreview()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Cantidad Piezas <span class="text-emerald-600">*</span></label>
+                                <input type="number" id="cantidad" required placeholder="0" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="calcularPreview()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ⏱️ CÁLCULOS DE COSTOS -->
+                    <div class="input-group">
+                        <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-lg mr-3">⏱️</div>
+                            Cálculos de Costos
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Operarios <span class="text-emerald-600">*</span></label>
+                                <input type="number" id="operarios" required placeholder="0" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="calcularPreview()">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Horas Totales</label>
+                                <input type="number" id="tiempoHoras" step="0.1" value="0" placeholder="0.0" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="calcularPreview()">
+                                <p class="text-xs text-emerald-700 mt-1 font-semibold" id="previewMO"></p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">💵 Materiales Adicionales</label>
+                                <input type="number" id="costoMateriales" step="0.01" value="0" placeholder="0.00" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="calcularPreview()">
+                            </div>
+                            <div class="input-pequeño">
+                                <label class="block text-xs font-bold text-gray-700 mb-2">⚙️ Tarifa M.O./Hora</label>
+                                <input type="number" id="tarifaMOHoraActual" step="0.01" value="26500" min="0"
+                                    class="w-full p-4 border-2 border-emerald-200 rounded-xl text-sm focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right" oninput="actualizarTarifaTemporal(); calcularPreview();">
+                                <p class="text-xs text-gray-500 mt-1 font-medium">Actual: <span id="tarifaActualDisplay" class="font-bold text-emerald-700">26.500</span></p>
+                            </div>
+
+                            <!-- PREVIEW DE COSTOS -->
+                            <div class="lg:col-span-2 bg-gradient-to-r from-emerald-50 to-green-50 p-6 rounded-2xl border-2 border-emerald-200" id="previewCostos" style="display: none;">
+                                <div class="font-black text-xl text-emerald-800 mb-4">📊 Vista Previa de Costos</div>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div class="text-right">
+                                        <span class="text-gray-600 block">Costo Piezas:</span>
+                                        <div class="font-black text-lg text-emerald-700" id="previewPiezas">$0</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-gray-600 block">Costo M.O.:</span>
+                                        <div class="font-black text-lg text-emerald-700" id="previewManoObra">$0</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-gray-600 block">Materiales:</span>
+                                        <div class="font-black text-lg text-emerald-700" id="previewMateriales">$0</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-gray-600 block">TOTAL:</span>
+                                        <div class="font-black text-2xl bg-gradient-to-r from-emerald-600 to-green-600 text-white px-4 py-2 rounded-xl shadow-lg" id="previewTotal">$0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 📝 OBSERVACIONES -->
+                    <div class="input-group">
+                        <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
+                            <div class="w-8 h-8 bg-emerald-100 rounded-xl flex items-center justify-center text-lg mr-3">📝</div>
+                            Observaciones
+                        </h3>
+                        <div>
+                            <textarea id="descripcion" rows="3" placeholder="Detalles adicionales, comentarios importantes del reproceso..."
+                                class="w-full p-6 border-2 border-emerald-200 rounded-2xl focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition-all resize-vertical font-semibold text-lg"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- ✅ BOTÓN PRINCIPAL -->
+                    <div class="flex justify-center pt-8">
+                        <button type="submit" 
+                            class="group bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-6 px-12 rounded-2xl text-xl shadow-2xl hover:shadow-3xl hover:scale-105 transform transition-all duration-300 flex items-center space-x-3">
+                            <span>➕ Guardar Registro</span>
+                            <span class="group-hover:rotate-12 transition-transform duration-300">✨</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- 📋 HISTORIAL -->
+        <div class="seccion">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-emerald-100">
+                <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center text-2xl mr-4 shadow-lg">📋</div>
+                        <h2 class="text-3xl font-black text-gray-900">Historial Completo</h2>
+                    </div>
+                    <button onclick="descargarExcel()" id="btnDescargar"
+                        class="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transform transition-all duration-300 flex items-center space-x-2">
+                        <span>📥</span>
+                        <span>Descargar Excel</span>
+                    </button>
+                </div>
+
+                <div id="historialContainer" class="overflow-hidden">
+                    <div class="text-center py-20 text-gray-400">
+                        <div class="text-8xl mb-8 mx-auto">📦</div>
+                        <p class="text-2xl font-semibold mb-2">Sin registros aún</p>
+                        <p class="text-lg">Agregue el primer reproceso para comenzar</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 🌟 VARIABLES GLOBALES
+        let registros = [];
+        let tarifas = { manoObraHora: 26500 };
+        let mapaSugerencias = {};
+        let tarifaTemporal = 26500;
+        
+        // 👥 CLIENTES PREDEFINIDOS
+        const CLIENTES_PREDEFINIDOS = [
+            "RIDUCO S.A.","EL RECURSO DEL RENAULT","KIMBERLY BOLIVIA S.A.","COMPANIA COLOMBIANA DE CERAMICA S.A.S",
+            "COLOMBIANA KIMBERLY COLPAPEL S.A.S.","RENAULT SOCIEDAD DE FABRICACION DE AUTOMOTORES S.A.S.","ACABADOS-RIDUCO",
+            "MABE COLOMBIA S.A.S.","COLEMPAQUES SAS","RINDER RIDUCO S.A.S.","GENERAL MOTORS COLMOTORES S.A.",
+            "LEGIS S.A.","PLASTICOS COLOMBIA S.A.S","SUZUKI MOTOR DE COLOMBIA S.A.","KIMBERLY","KIMBERLY-CLARK DE CENTROA",
+            "KIMBERLY-CLARK","HADA S.A.","PAPELES DEL CAUCA S.A.","FEDERACION NACIONAL DE CAFETER",
+            "FED.NAL.DE CAFETER.DE COLOMBIA LIOFILIZADO","HACEB WHIRLPOOL INDUSTRIAL SAS","MABE (OBSOLETO)",
+            "CAFE Y COMPAÑIA S.A.S. CAFE&CO S.A.S.","IFCO SYSTEMS COLOMBIA S.A.S.","PRODUCTOS ALIMENTICIOS PASCUAL S.A.",
+            "MUMA S.A.S.","FONDO EMP. FAB. CAFE LIOFILIZA","HMCL COLOMBIA S.A.S","NESTLE COLOMBIA S.A.",
+            "LAMINATE PACKAGING COLOMBIA SAS","SECCO S.A.S.","BATERIAS WILLARD S.A.","PRODUCTOS FAMILIA S.A.",
+            "FABRICA NACIONAL DE AUTOPARTES S.A.S/ FANALCA","RENAULT DO BRASIL","CROWN COLOMBIANA S.A.",
+            "PLASTICOS TRUHER S.A.","C.I. AZUCARES Y MIELES S.A.","CEMENTOS ARGOS S.A.","COMPAÑIA INTERNACIONAL DE ALIMENTOS SAS",
+            "MAYAGUEZ S.A","BAVARIA & CIA S C A","MANUELITA S.A.","YARA COLOMBIA S.A.","NESTLE PURINA PET CARE DE COLOMBIA S.A.",
+            "IMPOSEG INDUSTRIAL LTDA","SOCIEDAD PUERTO INDUSTRIAL AGUADULCE S.A","HIT DISTRIBUCIONES S.A.S.","INGENIO RISARALDA S.A.",
+            "CENTAK ENTERPRISES INC.","PLASTICOS EXTRUIDOS LTDA.","PRODUCTORA DE GELATINA S.A.","CERVECERIA UNION S.A.",
+            "AYCO LTDA","INDUSTRIA COLOMBIANA DE MOTOCICLETAS YAMAHA S.A.S","VIALE INTERNATIONAL S.A.","CASA LUKER S.A.",
+            "SISTELEN S.A.S.","KRONEN INTERNACIONAL S.A.","FRIOMIX DEL CAUCA S.A.","UNILEVER ANDINA COLOMBIA LTDA.",
+            "MEALS MERCADEO DE ALIMENTOS DE COLOMBIA SAS","ALIMENTOS INTELIGENTES S.A.S.","INDUSTRIAS HACEB S.A.",
+            "GRUPO UMAZF S.A.S.","CARVAJAL S.A","SUPER DE ALIMENTOS S.A.S.","KASSANI DISEÑO SAS","SERIES SAS",
+            "UMO S.A.","ATEHORTUA TRUJILLO GERMAN","LOGISTICA, SERVICIOS, MAQUINARIA Y PARTES SAS LOGIMAQ",
+            "TECNIALAMBRE S.A.","MEXICHEM COLOMBIA S.A.S.","COLOMBIANA DE EXTRUSION SA. EXTRUCOL","ARMAS INTERNACIONAL S.A.S.",
+            "ULTRACEM S.A.S.","LABORATORIOS BAXTER S.A."
+        ];
+        
+        // ⚠️ MOTIVOS DE NO CONFORMIDAD PREDEFINIDOS
+        const MOTIVOS_NO_CONFORMIDAD = [
+            "DEFECTO","CONTAMINADOS","FALTA DE MATERIAL","RECHUPES","TONALIDAD DIFERENTE",
+            "RETENCIONES","GASES","FLUJOS","MAL PULIDO","FISURAS","QUEMADOS",
+            "FUERA DE ESPECIFICACION DIMENSIONAL","REVENTADOS","ESPIGO REVENTADO","PIN REVENTADO",
+            "DESCASES","MANCHAS DE TINTA","SIN SCREEN","SCREEN INCOMPLETO","EMBOTES",
+            "RAYAS SCREEN","TONALIDAD DIFERENTE SCREEN","DESTAPES","MALA ADHERENCIA SCREEN",
+            "MALA UBICACIÓN SCREEN","DEFLECTOR DESPEGADO","MAL TROQUELADO","OBSOLETO",
+            "MARCA EXPULSOR","MANCHAS","DEFORMACIÓN POR EMPAQUE","RAYAS","MAL ENSAMBLE",
+            "MAL SELLADO","LLAGAS","OTROS","ARRUGAS","BURBUJAS","DEFORMACIÓN",
+            "DEFOLIACIÓN","GOLPES","SELLADO Y PRUEBA DE AIRE CALIENTE","DESPEGADO (PUNTOS DE SELLADO)",
+            "NO ARRANCA","DESPICADO INYECCIÓN","DEBILIDAD ACABADOS","TALLONES",
+            "SIN CONTINUIDAD  (ELECTR)","MUESTRAS","PRUEBAS Y ENSAYOS","REVISIÓN 100%",
+            "DOBLE PERFORACIÓN","DESENSAMBLE TELA, REVENTADOS PIN INSERTOS","MALA UBICACIÓN PERFORACIÓN",
+            "AFLORAMIENTO LISTÓN-ENSAMBLE AUTOPARTES","REVISAR FALTA DE COMPONENTE",
+            "FALTA STICKER GARANTIA","SIN PERFORACIÓN","MALA ADHERENCIA PINTURA LISTÓN",
+            "BOLSILLO MAL POSICIONADO","FALTA RIEL CONDUCTOR","OBTURADOR TROCADO",
+            "LISTÓN DESPINTADO","DIFERENCIA COLOR PISTÓN","REVISAR SELLADO Y FUGAS",
+            "REVISAR SOBRANTES Y FALTANTES EN DESPACHO","REVISAR LINER LEVANTADO","VISOS",
+            "EXTRACCIÓN LINER","REEMPAQUE","AJUSTE ROBOT","REVISAR EL SCREEN","BLANQUEAMIENTO",
+            "REVISAR TONALIDAD","REPROCESO EN TUNEL DE CALOR","SIN COMPONENTES","CORTE DESCENTRADO",
+            "DESCOCIDO","DESPEGADO TELA Y BONDEO EN PIEZA","FALTANTE DE UNIDADES","BEBEDEROS PEGADOS",
+            "BRILLO","UNIDADES TROCADAS","EMPASTE","DESHILADOS","GRUMOS","DESPEGADO TELA EN BONDEO",
+            "REBABA"
+        ];
+
+        // 🏭 SECCIONES ORIGEN PROBLEMA PREDEFINIDAS
+        const SECCIONES_ORIGEN = [
+            "ALMACÉN PP/PT",
+            "PLANTA DEL CLIENTE",
+            "INYECCIÓN",
+            "ALMACÉN",
+            "ALMACEN PP / PT HWI",
+            "MURO (MANIZALES)",
+            "LOGISTICO"
+        ];
+
+        // 🧩 BASE DE DATOS DE PIEZAS
+        const BASE_DATOS_PIEZAS = [
+            {codigo: "03AUT0045M", nombre: "BOLSILLO DELANT LVE DER ECE-95", costoUnitario: "4544.7"},
+{codigo: "03AUT0046M", nombre: "BOLSILLO DELANT LVE IZQ ECE-95", costoUnitario: "4564.94"},
+{codigo: "03AUT0088M", nombre: "PARACHOQUE DELANTER H79 INY PV", costoUnitario: "42133"},
+{codigo: "03AUT0089M", nombre: "PARACHOQUE TRASERO H79 INY PV", costoUnitario: "33756.9"},
+{codigo: "03AUT0112", nombre: "INSON TRA DER GLC SIN ADHESIVO", costoUnitario: "4945"},
+{codigo: "03AUT0113", nombre: "INSON CEN IZQ GLC SIN ADHESIVO", costoUnitario: "5289"},
+{codigo: "03AUT0114", nombre: "INSON DEL IZQ GLC SIN ADHESIVO", costoUnitario: "5289"},
+{codigo: "03AUT0127", nombre: "RIEL PASAJERO", costoUnitario: "3045.19"},
+{codigo: "03AUT0129", nombre: "REFUERZO TAPA GAVE PdB X90-H79", costoUnitario: "5657"},
+{codigo: "03AUT0130", nombre: "MANIJA TAPA GAVE PdB X90-H79", costoUnitario: "1485"},
+{codigo: "03AUT0132M", nombre: "BOLSILLO DEL DER X52", costoUnitario: "2323"},
+{codigo: "03AUT0133M", nombre: "BOLSILLO DEL IZQ X52", costoUnitario: "2581.07"},
+{codigo: "03AUT0134M", nombre: "BOLSILLO TRAS DER X52", costoUnitario: "1522.78"},
+{codigo: "03AUT0135M", nombre: "BOLSILLO TRAS IZQ X52", costoUnitario: "1840.15"},
+{codigo: "03AUT0136", nombre: "APOYABRAZO LVE DEL DER X52", costoUnitario: "2722.02"},
+{codigo: "03AUT0137", nombre: "APOYABRAZO LVE DEL IZQ X52", costoUnitario: "4459.08"},
+{codigo: "03AUT0140M", nombre: "APOYABRAZO LVE TRAS DER X52", costoUnitario: "3591"},
+{codigo: "03AUT0141M", nombre: "APOYABRAZO LVE TRAS IZQ X52", costoUnitario: "3591"},
+{codigo: "03AUT0142", nombre: "BASE MANIJA DEL DER X52", costoUnitario: "2214"},
+{codigo: "03AUT0143", nombre: "BASE MANIJA DEL IZQ X52", costoUnitario: "2214"},
+{codigo: "03AUT0150", nombre: "MANIJA TAPA GUANTERA X52", costoUnitario: "2410.915"},
+{codigo: "03AUT0156", nombre: "INSONORIZANTE CUSTODIA DER L52", costoUnitario: "1671"},
+{codigo: "03AUT0157", nombre: "INSONORIZANTE CUSTODIA IZQ L52", costoUnitario: "1671"},
+{codigo: "03AUT0158", nombre: "INSONORIZANTE CUSTODIA DER B52", costoUnitario: "684.74375"},
+{codigo: "03AUT0159", nombre: "INSONORIZANTE CUSTODIA IZQ B52", costoUnitario: "684.726666666667"},
+{codigo: "03AUT0165", nombre: "CORTINA DESLIZANTE H79 PH II", costoUnitario: "440.43"},
+{codigo: "03AUT0168M", nombre: "PARACHOQUE TRAS L52 INY PV", costoUnitario: "26336.73"},
+{codigo: "03AUT0170", nombre: "REFUERZO TAPA GAVETA H79PHII", costoUnitario: "12513.2"},
+{codigo: "03AUT0174", nombre: "TAPA LATERAL COFRE DER ECE 95", costoUnitario: "1484.71"},
+{codigo: "03AUT0185", nombre: "TAPA LAT COFRE DER H79 PP3150", costoUnitario: "1433.56"},
+{codigo: "03AUT0190M", nombre: "ENSAMBLE TAPA GAVE PDB BL52 EG", costoUnitario: "19018.93"},
+{codigo: "03AUT0191", nombre: "CONDUCTO REPARTICION BL52 15T20", costoUnitario: "2231.21666666667"},
+{codigo: "03AUT0192", nombre: "CUBIERTA TAPA GAVE PDB H79 EG273HP", costoUnitario: "4187.14"},
+{codigo: "03AUT0194", nombre: "ENSAMBLE TAPA GAVE PDB H79 EG273HP", costoUnitario: "14540.82"},
+{codigo: "03AUT0195M", nombre: "CUERPO PDB X52 EG", costoUnitario: "48643"},
+{codigo: "03AUT0196M", nombre: "CUBIERTA PDB X52 EG", costoUnitario: "25161"},
+{codigo: "03AUT0197M", nombre: "REFUERZO PDB X52 15T20", costoUnitario: "13066.88"},
+{codigo: "03AUT0214M", nombre: "PARACH TRASERO L52 PH2 CAM INY", costoUnitario: "41504"},
+{codigo: "03AUT0218", nombre: "APOYABRAZOS DEL DER X52 PH2", costoUnitario: "5089.92"},
+{codigo: "03AUT0219", nombre: "APOYABRAZOS DEL IZQ X52 PH2", costoUnitario: "5089.92"},
+{codigo: "03AUT0220", nombre: "MEDALLON DEL DER X52 PH2", costoUnitario: "5585.83"},
+{codigo: "03AUT0221", nombre: "MEDALLON DEL IZQ X52 PH2", costoUnitario: "5585.83"},
+{codigo: "03AUT0222", nombre: "MEDALLON DEL D TEX MAGIPUNTO", costoUnitario: "12204.29"},
+{codigo: "03AUT0223", nombre: "MEDALLON DEL I TEX MAGIPUNTO", costoUnitario: "12204.29"},
+{codigo: "03AUT0224", nombre: "MEDALLON DEL D TEX SILVER", costoUnitario: "13739.42"},
+{codigo: "03AUT0225", nombre: "MEDALLON DEL I TEX SILVER", costoUnitario: "13739.42"},
+{codigo: "03AUT0226", nombre: "MEDALLON DEL D TEX ZEBULON GRI", costoUnitario: "12204.29"},
+{codigo: "03AUT0227", nombre: "MEDALLON DEL I TEX ZEBULON GRI", costoUnitario: "12204.29"},
+{codigo: "03AUT0228", nombre: "MEDALLON DEL I TEP NEGRO", costoUnitario: "11933.69"},
+{codigo: "03AUT0229", nombre: "MEDALLON DEL D TEP NEGRO", costoUnitario: "11933.69"},
+{codigo: "03AUT0231", nombre: "MEDALLON DEL D TEP CABO", costoUnitario: "13348.83"},
+{codigo: "03AUT0232", nombre: "MEDALLON DEL D TEP GRAPHIT", costoUnitario: "11933.69"},
+{codigo: "03AUT0233", nombre: "MEDALLON DEL I TEP GRAPHIT", costoUnitario: "11933.69"},
+{codigo: "03AUT0236", nombre: "TAPA GANCHO REM TRAS HJD NEGRO", costoUnitario: "1346"},
+{codigo: "03AUT0237", nombre: "TAPA GANCHO REM TRAS HJD PLATA", costoUnitario: "1530.6"},
+{codigo: "03AUT0240M", nombre: "PARACHOQUE TRAS SUP HJD INY", costoUnitario: "22182.0909090909"},
+{codigo: "03AUT0241M", nombre: "PARACHOQUE TRAS INF HJD INY", costoUnitario: "18167.6666666667"},
+{codigo: "03AUT0242M", nombre: "PARACHOQUE DEL SUP HJD INY", costoUnitario: "25379.1"},
+{codigo: "03AUT0243", nombre: "TAPA GANCHO DEL DER HJD NEGRO", costoUnitario: "1807.3"},
+{codigo: "03AUT0244", nombre: "TAPA GANCHO DEL IZQ HJD NEGRO", costoUnitario: "1807.3"},
+{codigo: "03AUT0245", nombre: "TAPA GANCHO DEL DER HJD PLATA", costoUnitario: "2376.3"},
+{codigo: "03AUT0246", nombre: "TAPA GANCHO DEL IZQ HJD PLATA", costoUnitario: "2376.3"},
+{codigo: "03AUT0257M", nombre: "ENS REFUERZO DIFUSOR PDB HJD", costoUnitario: "16110"},
+{codigo: "03AUT0260", nombre: "EST RADIO PDB DIV2 HJD A-IVI", costoUnitario: "13680.3"},
+{codigo: "03AUT0261M", nombre: "ENSAMBLE TAPA GAVETA PDB HJD", costoUnitario: "15635"},
+{codigo: "03AUT0262", nombre: "EST RADIO PDB DIV1 HJD RAD010", costoUnitario: "16074.8"},
+{codigo: "03AUT0265M", nombre: "MEDALLON DEL DER HJD TELA GRIS", costoUnitario: "5841"},
+{codigo: "03AUT0266M", nombre: "MEDALLON DEL IZQ HJD TELA GRIS", costoUnitario: "5841"},
+{codigo: "03AUT0267M", nombre: "APOYABRAZOS DEL DER TEP NEGRO", costoUnitario: "7100.625"},
+{codigo: "03AUT0268M", nombre: "APOYABRAZOS DEL IZQ TEP NEGRO", costoUnitario: "7100.625"},
+{codigo: "03AUT0270M", nombre: "PARAC DEL LCROSS X52PH2 INY PV", costoUnitario: "35730.81"},
+{codigo: "03AUT0277", nombre: "CORTE IZQ TEP NEGRO", costoUnitario: "2635"},
+{codigo: "03AUT0278", nombre: "CORTE DER TEP NEGRO", costoUnitario: "2635"},
+{codigo: "03AUT0280", nombre: "CORTE DER TEP CABO", costoUnitario: "5262"},
+{codigo: "03AUT0281", nombre: "CORTE DER TEP GRAPHIT", costoUnitario: "2635"},
+{codigo: "03AUT0282", nombre: "CORTE IZQ TEP GRAPHIT", costoUnitario: "2635"},
+{codigo: "03AUT0287", nombre: "CORTE TEP APOYA/ZOS DER SANFOM", costoUnitario: "4052"},
+{codigo: "03AUT0288", nombre: "CORTE TEP APOYA/ZOS IZQ SANFOM", costoUnitario: "4052"},
+{codigo: "03AUT0289M", nombre: "PANEL PUERTA DEL DER U79", costoUnitario: "42546.1"},
+{codigo: "03AUT0290M", nombre: "PANEL PUERTA DEL IZQ U79", costoUnitario: "42546"},
+{codigo: "03AUT0291M", nombre: "PANEL PUERTA TRAS DER U79", costoUnitario: "35735.1"},
+{codigo: "03AUT0292M", nombre: "PANEL PUERTA TRAS IZQ U79", costoUnitario: "35738"},
+{codigo: "03AUT0299", nombre: "BOTONERA MED-APOY X52-HJD", costoUnitario: "428.6"},
+{codigo: "03AUT0300M", nombre: "PARACHOQUE TRAS SUP HJD INY PV", costoUnitario: "22182.2"},
+{codigo: "03AUT0301M", nombre: "PARACHOQUE TRAS INF HJD INY PV", costoUnitario: "18167.5"},
+{codigo: "03AUT0302M", nombre: "PARACHOQUE DEL SUP HJD INY PV", costoUnitario: "25379.1"},
+{codigo: "03AUT0304M", nombre: "PARACH TRAS BCROSS X52PH2 INY", costoUnitario: "36671"},
+{codigo: "03AUT0306", nombre: "TAPA GANCH DEL DER HJD MY2324", costoUnitario: "1807.3"},
+{codigo: "03AUT0307", nombre: "TAPA GANCH DEL IZQ HJD MY2324", costoUnitario: "2376.3"},
+{codigo: "03AUT0308", nombre: "TAPA GANCH TRA HJD MY2324", costoUnitario: "1530.6"},
+{codigo: "03AUT0310M", nombre: "MEDALLON DEL DER HJD TEXTIL NEGRO", costoUnitario: "24699"},
+{codigo: "03AUT0311M", nombre: "MEDALLON DEL IZQ HJD TEXTIL NEGRO", costoUnitario: "24699"},
+{codigo: "03AUT0312M", nombre: "APOY. DEL DER TEP NEGRO DOBLE COSTURA", costoUnitario: "12609"},
+{codigo: "03AUT0313M", nombre: "APOY. DEL IZQ TEP NEGRO DOBLE COSTURA", costoUnitario: "12609"},
+{codigo: "03AUT0314M", nombre: "CUERPO PLANCHA DE  BORDO BBB", costoUnitario: "55317"},
+{codigo: "03AUT0315M", nombre: "CUBIERTA PLANCHA DE  BORDO BBB", costoUnitario: "20257"},
+{codigo: "03AUT0316", nombre: "REFUERZO PLANCHA DE  BORDO BBB", costoUnitario: "5454"},
+{codigo: "03AUT0318M", nombre: "PANEL PUERTA DEL INF DER BBB", costoUnitario: "11591.624"},
+{codigo: "03AUT0319M", nombre: "PANEL PUERTA DEL INF IZQ BBB", costoUnitario: "11591.624"},
+{codigo: "03AUT0320M", nombre: "PANEL PUERTA DEL SUP DER BBB", costoUnitario: "3542.76"},
+{codigo: "03AUT0321M", nombre: "PANEL PUERTA DEL SUP IZQ BBB", costoUnitario: "3542.76"},
+{codigo: "03AUT0322", nombre: "SUJETADOR PANEL PUERTA DEL A DER BBB", costoUnitario: "216"},
+{codigo: "03AUT0323", nombre: "SUJETADOR PANEL PUERTA DEL A IZQ BBB", costoUnitario: "216"},
+{codigo: "03AUT0324", nombre: "SUJETADOR PANEL  PUERTA DEL B DER BBB", costoUnitario: "237"},
+{codigo: "03AUT0325", nombre: "SUJETADOR PANEL PUERTA DEL B IZQ BBB", costoUnitario: "237"},
+{codigo: "03AUT0326", nombre: "BOLSILLO PANEL PUERTA DEL DER BBB", costoUnitario: "3781"},
+{codigo: "03AUT0327", nombre: "BOLSILLO PANEL PUERTA DEL IZQ BBB", costoUnitario: "3781"},
+{codigo: "03AUT0328", nombre: "PADDING PANEL PUERTA TRAS IZQ HJD", costoUnitario: "2119.12"},
+{codigo: "03AUT0329", nombre: "PADDING PANEL PUERTA TRAS DER HJD", costoUnitario: "2119.12"},
+{codigo: "03AUT0330M", nombre: "PANEL PUERTA DEL SUP DER MANUAL BBB", costoUnitario: "7428"},
+{codigo: "03AUT0331M", nombre: "PANEL PUERTA DEL SUP IZQ MANUAL BBB", costoUnitario: "7428"},
+{codigo: "03AUT0332M", nombre: "CUBIERTA PDB HJD PHASE OUT", costoUnitario: "20343"},
+{codigo: "03AUT0333M", nombre: "CUERPO PDB. HJD REG FAROS PHASE OUT", costoUnitario: "30280"},
+{codigo: "03AUT0334M", nombre: "PANEL PUERTA DEL DER HJD INY PHASE OUT", costoUnitario: "22423"},
+{codigo: "03AUT0335M", nombre: "PANEL PUERTA DEL IZQ HJD INY PHASE OUT", costoUnitario: "22423"},
+{codigo: "03AUT0336M", nombre: "PANEL PUERTA TRAS DER HJD INY PHASE OUT", costoUnitario: "19168"},
+{codigo: "03AUT0337M", nombre: "PANEL PUERTA TRAS IZQ HJD INY PHASE OUT", costoUnitario: "19168"},
+{codigo: "03AUT0338", nombre: "CORTINA DESLIZANTE POLE 32 BBB", costoUnitario: "1509"},
+{codigo: "03AUT0339M", nombre: "ENSAMBLE TAPA GAVETA PDB HJD PHASE OUT", costoUnitario: "8801"},
+{codigo: "03AUT0344", nombre: "BOLSILLO PPDD BLANCO XBBMY26", costoUnitario: "16118"},
+{codigo: "03AUT0345", nombre: "BOLSILLO PPDD AZUL  XBBMY26", costoUnitario: "10237"},
+{codigo: "03AUT0346", nombre: "BOLSILLO PPDI BLANCO XBBMY26", costoUnitario: "16118"},
+{codigo: "03AUT0347", nombre: "BOLSILLO PPDI AZUL XBBMY26", costoUnitario: "10237"},
+{codigo: "03AUT0645", nombre: "CUBTA MANIJA DEL DER X52 SP", costoUnitario: "1396.68"},
+{codigo: "03AUT0646", nombre: "CUBTA MANIJA DEL IZQ X52 SP", costoUnitario: "1396.68"},
+{codigo: "03GMC0007", nombre: "TAPÓN MANIJA PP JOY", costoUnitario: "354"},
+{codigo: "03INY0047", nombre: "PATAS MESA GRILL BLANCAS", costoUnitario: "1692.08"},
+{codigo: "03INY0049", nombre: "TAPON MESA GRILL ANTIDESLIZANT", costoUnitario: "72.1"},
+{codigo: "03INY0069", nombre: "BASE GANCHO LEGAJ.NUEVO TRANSP", costoUnitario: "20.38"},
+{codigo: "03INY0072", nombre: "DESLIZADOR GANCHO LEGAJ TRANSP", costoUnitario: "18.04"},
+{codigo: "03INY0140", nombre: "INS SILLA IMPER GARDEN BLANCA", costoUnitario: "1081.37"},
+{codigo: "03INY0142", nombre: "INS SILLA IMPER GARDEN VERDE", costoUnitario: "1123.74"},
+{codigo: "03INY0144", nombre: "INS MESA TOBAGO BEIGE", costoUnitario: "4828.47"},
+{codigo: "03INY0159", nombre: "PATAS MESA RHONDA BLANCAS", costoUnitario: "3194.28"},
+{codigo: "03INY0160", nombre: "TAPON CENTRAL MESA BLANCA", costoUnitario: "145.11"},
+{codigo: "03INY0178", nombre: "BASE SOMBR MES RHONDA BLAN 46", costoUnitario: "3198.92"},
+{codigo: "03INY0229", nombre: "BASE MESA OCTOGONAL BLANCA", costoUnitario: "28032.06"},
+{codigo: "03INY0238", nombre: "INSERTO MESA OCTOGONAL VERDE", costoUnitario: "15283.98"},
+{codigo: "03INY0239", nombre: "BASE SOMB.MESA OCTAG BLANCA", costoUnitario: "3658.05"},
+{codigo: "03INY0243", nombre: "INS.BASE DERECHO BEIGE-ARENA", costoUnitario: "405.41"},
+{codigo: "03INY0247", nombre: "INS.BASE IZQUIERDO BEIGE ARENA", costoUnitario: "409.22"},
+{codigo: "03INY0251", nombre: "INSERTO BASE CORTO BEIGE ARENA", costoUnitario: "268.63"},
+{codigo: "03INY0291", nombre: "TELA BASE DESERT SAND COR Y SE", costoUnitario: "3684.37"},
+{codigo: "03INY0422", nombre: "TELA ESPALDAR DESERT SAND C-SE", costoUnitario: "5280.03"},
+{codigo: "03INY0691", nombre: "LLAVE PLASTICA", costoUnitario: "87.53"},
+{codigo: "03INY0748", nombre: "VISOR FRONTAL BULKPACK SAN368R", costoUnitario: "173.95"},
+{codigo: "03INY0813", nombre: "TACON SILLA SANTORINI", costoUnitario: "59"},
+{codigo: "03INY0881", nombre: "PUERTA ARMARIO BLANCO", costoUnitario: "3764.33"},
+{codigo: "03INY0944", nombre: "TAPON SILLA CAFF DER A PRESION", costoUnitario: "111.88"},
+{codigo: "03INY0945", nombre: "TAPON SILLA CAFF IZQ A PRESION", costoUnitario: "111.87"},
+{codigo: "03INY0950", nombre: "RESORTE PLAST DISPENSADOR MOD", costoUnitario: "261.2"},
+{codigo: "03INY0954", nombre: "CONVERTOR NEGR DISPENSADOR MOD", costoUnitario: "42.53"},
+{codigo: "03INY0962", nombre: "BASE NEGRA HBT", costoUnitario: "2832.43"},
+{codigo: "03INY0965", nombre: "BASE NEGRA-NEGRA SCOTT FOLD", costoUnitario: "4177"},
+{codigo: "03INY0984", nombre: "BASE NEGRA JRT MODIFICADO", costoUnitario: "2880.16"},
+{codigo: "03INY1000", nombre: "PAD LATERAL PP/NG", costoUnitario: "14162.2"},
+{codigo: "03INY1001", nombre: "PAD CENTRAL PP/NG", costoUnitario: "14162.2"},
+{codigo: "03INY1010", nombre: "FILTRO CRISTAL BLUE INYECTADO", costoUnitario: "157.28"},
+{codigo: "03INY1022", nombre: "BOTON BLAN STX DISPENSADOR MOD", costoUnitario: "51.03"},
+{codigo: "03INY1024", nombre: "CONVERTOR BLAN STX DISPENS MOD", costoUnitario: "49.9"},
+{codigo: "03INY1026", nombre: "TAPA FLIP HUGGIES BLANCA LISA", costoUnitario: "123"},
+{codigo: "03INY1060", nombre: "MESA TOBAGO WENGUE SIN INSERTO", costoUnitario: "9873.54"},
+{codigo: "03INY1077", nombre: "ACOPLE HEMBRA S/ENS", costoUnitario: "24.74"},
+{codigo: "03INY1079", nombre: "PERILLA CAJA CONTROL ANDR?MEDA", costoUnitario: "34.23"},
+{codigo: "03INY1082", nombre: "TAPON INSERTO ESTIBA DOBLE", costoUnitario: "1"},
+{codigo: "03INY1104", nombre: "LATERAL CORTO 18 MEZ D M#0 PRO", costoUnitario: "852.04"},
+{codigo: "03INY1107", nombre: "LATERAL LARGO 18 MEZ D M#0 PRO", costoUnitario: "1241.07"},
+{codigo: "03INY1115", nombre: "PERILLA CYCLE CAJA CONTROL INY", costoUnitario: "32.19"},
+{codigo: "03INY1137", nombre: "CAJON GRA AMAR + MANIJA AZUL", costoUnitario: "5286.76"},
+{codigo: "03INY1138", nombre: "CAJON GRA AZUL + MANIJA AZUL", costoUnitario: "5286.76"},
+{codigo: "03INY1139", nombre: "CAJON GRA FUCSIA + MANIJA MORADA", costoUnitario: "5618.92"},
+{codigo: "03INY1140", nombre: "CAJON GRA GRIS HUM + MANIJA NEGRA", costoUnitario: "5157.59"},
+{codigo: "03INY1141", nombre: "CAJON GRA ROJO + MANIJA AZUL", costoUnitario: "5286.76"},
+{codigo: "03INY1142", nombre: "CAJON GRA TRANSP + MANIJA AZUL", costoUnitario: "5192.05"},
+{codigo: "03INY1143", nombre: "CAJON GRA VERDE + MANIJA AZUL", costoUnitario: "5286.76"},
+{codigo: "03INY1144", nombre: "CAJON GRA VERDE + MANIJA MORADA", costoUnitario: "5286.76"},
+{codigo: "03INY1146", nombre: "CAJON GRAN TRANS + MANIJA WENGUE", costoUnitario: "5192.05"},
+{codigo: "03INY1149", nombre: "CAJON GRANDE NARANJA ACIDO", costoUnitario: "5320.17"},
+{codigo: "03INY1151", nombre: "CAJON PEQ AMAR + MANIJA AZUL", costoUnitario: "4176.08"},
+{codigo: "03INY1152", nombre: "CAJON PEQ GRIS HUMO + MANIJA NEGRA", costoUnitario: "4070.6"},
+{codigo: "03INY1153", nombre: "CAJON PEQ ROJO + MANIJA AZUL", costoUnitario: "4176.08"},
+{codigo: "03INY1154", nombre: "CAJON PEQ TRANSP + MANIJA AZUL", costoUnitario: "4105.07"},
+{codigo: "03INY1155", nombre: "CAJON PEQ VERDE + MANIJA AZUL", costoUnitario: "4176.08"},
+{codigo: "03INY1156", nombre: "CAJON PEQUEÑO AMARILLO ACIDO", costoUnitario: "4105.07"},
+{codigo: "03INY1157", nombre: "CAJON PEQUEÑO BEIGE", costoUnitario: "4176.08"},
+{codigo: "03INY1159", nombre: "CAJON PEQUEÑO VERDE ACIDO", costoUnitario: "4105.07"},
+{codigo: "03INY1160", nombre: "ESTRUCTURA ARCHIVADOR MOV NEGRA", costoUnitario: "2163.15"},
+{codigo: "03INY1161", nombre: "ESTRUCTURA GRANDE AZUL", costoUnitario: "3580.62"},
+{codigo: "03INY1162", nombre: "ESTRUCTURA GRANDE AZUL 5G ENS X 5", costoUnitario: "3580.62"},
+{codigo: "03INY1163", nombre: "EST GRANDE MORADO ACIDO 5G ENS", costoUnitario: "3580.62"},
+{codigo: "03INY1164", nombre: "ESTRUCTURA GRANDE NEGRA", costoUnitario: "2965.5"},
+{codigo: "03INY1165", nombre: "ESTRUCTURA GRANDE NEGRA 5G ENS X 5", costoUnitario: "2965.5"},
+{codigo: "03INY1166", nombre: "ESTRUCTURA GRANDE VERDE ACIDO", costoUnitario: "3580.62"},
+{codigo: "03INY1167", nombre: "ESTRUCTURA GRANDE WENGUE", costoUnitario: "3580.62"},
+{codigo: "03INY1168", nombre: "ESTRUCTURA GRANDE WENGUE 5G ENS X 5", costoUnitario: "3580.62"},
+{codigo: "03INY1169", nombre: "ESTRUCTURA PEQUEÑA AZUL", costoUnitario: "2925.33"},
+{codigo: "03INY1170", nombre: "ESTRUCTURA PEQUEÑA NEGRA", costoUnitario: "2591.27"},
+{codigo: "03INY1171", nombre: "ESTRUCTURA PEQUEÑA VERDE ACIDO", costoUnitario: "2925.33"},
+{codigo: "03INY1172", nombre: "ESTRUCTURA PEQUEÑA WENGUE", costoUnitario: "2925.33"},
+{codigo: "03INY1173", nombre: "MANIJA CAJON AZUL", costoUnitario: "298.75"},
+{codigo: "03INY1174", nombre: "MANIJA CAJON MORADO ACIDO", costoUnitario: "298.75"},
+{codigo: "03INY1175", nombre: "MANIJA CAJON NEGRA", costoUnitario: "264.29"},
+{codigo: "03INY1176", nombre: "MANIJA CAJON VERDE ACIDO", costoUnitario: "298.75"},
+{codigo: "03INY1177", nombre: "MANIJA CAJON WENGUE", costoUnitario: "298.75"},
+{codigo: "03INY1178", nombre: "SOPORTE CAJON NEGRO 1-3", costoUnitario: "196.55"},
+{codigo: "03INY1179", nombre: "SOPORTE CAJON NEGRO 2-4", costoUnitario: "196.55"},
+{codigo: "03INY1180", nombre: "TAPA ARCHIVADOR MOVIL NEGRA", costoUnitario: "1769.05"},
+{codigo: "03INY1181", nombre: "TAPA CAJON AZUL", costoUnitario: "3179.6"},
+{codigo: "03INY1182", nombre: "TAPA CAJON MORADO ACIDO", costoUnitario: "3179.6"},
+{codigo: "03INY1183", nombre: "TAPA CAJON NEGRA", costoUnitario: "3326"},
+{codigo: "03INY1184", nombre: "TAPA CAJON VERDE ACIDO", costoUnitario: "3179.6"},
+{codigo: "03INY1185", nombre: "TAPA CAJON WENGUE", costoUnitario: "3179.6"},
+{codigo: "03INY1198", nombre: "ESTRUCTURA GRANDE MORADO ACIDO", costoUnitario: "3580.62"},
+{codigo: "03INY1205", nombre: "BASE MASCAR PROT FACIAL RIDUCO", costoUnitario: "441.9"},
+{codigo: "03INY1209", nombre: "FILTRO GRIS INYECTADO", costoUnitario: "238.52"},
+{codigo: "03INY1214", nombre: "REM JAL POKET FF NEGRO P007", costoUnitario: "2641"},
+{codigo: "03INY1235", nombre: "TAPA HERRAMIENTAS IZQ ECODELUX", costoUnitario: "1999"},
+{codigo: "03INY1236", nombre: "PORTASEGUROS ECODELUX", costoUnitario: "1228"},
+{codigo: "03INY1237", nombre: "PROTECT AGUA TRAS ECODELUX100", costoUnitario: "1439"},
+{codigo: "03INY1240", nombre: "TAPA HERRAMIENTAS IZQ ECO100", costoUnitario: "1982"},
+{codigo: "03INY1242", nombre: "PORTASEGUROS ECO100", costoUnitario: "1257"},
+{codigo: "03INY1267", nombre: "FILTRO GRIS INYECTADO HWI", costoUnitario: "261.43"},
+{codigo: "03INY1325", nombre: "TAPA FLIP-TOP 27MM BLANCO PROC", costoUnitario: "42"},
+{codigo: "03INY1335", nombre: "CAJON GRANDE VARIOS COLORES", costoUnitario: "5469"},
+{codigo: "03INY1345", nombre: "T DOMO 32 MM BLANCA EN PROCESO", costoUnitario: "40"},
+{codigo: "03INY1347", nombre: "T DOMO 32 MM MORADO EN PROCESO", costoUnitario: "40"},
+{codigo: "03INY1348", nombre: "T DOMO 32 MM AZUL EN PROCESO", costoUnitario: "40"},
+{codigo: "03INY1349", nombre: "T DOMO 32 MM NEGRO EN PROCESO", costoUnitario: "40"},
+{codigo: "03INY1364", nombre: "BASE PERILLA BOTERO", costoUnitario: "462"},
+{codigo: "03INY1365", nombre: "BASE FILTRO BOTERO", costoUnitario: "645"},
+{codigo: "03INY1368", nombre: "T.FLIP-TOP 27 ROJO CAN EN PROC", costoUnitario: "62.2"},
+{codigo: "03INY1369", nombre: "T.FLIP-TOP 27 VER LIM EN PROC", costoUnitario: "62.2"},
+{codigo: "03INY1402", nombre: "VENTANA DISP ESPUMA-FOAM", costoUnitario: "549"},
+{codigo: "03INY1403", nombre: "BASE DISP ESPUMA-FOAM", costoUnitario: "4273"},
+{codigo: "03INY1404", nombre: "RESORTE DISP ESPUMA-FOAM", costoUnitario: "1237"},
+{codigo: "03INY1405", nombre: "SEGURO DISP ESPUMA-FOAM", costoUnitario: "317"},
+{codigo: "03INY1406", nombre: "CLIP ESPUMA 800ML", costoUnitario: "291"},
+{codigo: "03INY1407", nombre: "LLAVE DISPENSADOR DE JABON", costoUnitario: "176"},
+{codigo: "03INY1412", nombre: "BASE SPRAY 400ML", costoUnitario: "3255"},
+{codigo: "03INY1413", nombre: "RESORTE SPRAY 400ML", costoUnitario: "1158"},
+{codigo: "03INY1416", nombre: "VENTANA DISP SPRAY 800-1000ML", costoUnitario: "552"},
+{codigo: "03INY1417", nombre: "BASE DISP SPRAY 800-1000ML", costoUnitario: "3848"},
+{codigo: "03INY1418", nombre: "RESORTE DISP SPRAY 800-1000ML", costoUnitario: "206"},
+{codigo: "03INY1419", nombre: "SEGURO SPR 400ML/SPR800-1000ML", costoUnitario: "1236"},
+{codigo: "03INY1422", nombre: "SOBRE TAPA CONJUNTO 55 NEGRO", costoUnitario: "1467"},
+{codigo: "03INY1423", nombre: "SOBRE TAPA CONJUNTO 55 AMARILLO", costoUnitario: "1796"},
+{codigo: "03INY1424", nombre: "MANIJA CONJUNTO 55 NEGRO", costoUnitario: "227"},
+{codigo: "03INY1425", nombre: "MANIJA CONJUNTO 55 AMARILLO", costoUnitario: "275"},
+{codigo: "03INY1427", nombre: "TAPA FILTRO INT HWI COPA 2.0", costoUnitario: "700"},
+{codigo: "03INY1429", nombre: "ENS TAPA + MANJIA CONJUN 55 NG", costoUnitario: "3964"},
+{codigo: "03INY1430", nombre: "ENS TAPA + MANJIA CONJUN 55 AMA", costoUnitario: "4717"},
+{codigo: "03INY1432", nombre: "FILTRO INTER HACEB COPA 2.0", costoUnitario: "800"},
+{codigo: "03INY1434", nombre: "CBTA PLASTICA NIAGARA HWI", costoUnitario: "100"},
+{codigo: "03INY1451", nombre: "REMA JAL FF AND 300 NEG INY MB", costoUnitario: "2802"},
+{codigo: "03OTR0001", nombre: "RESORTE MASCARA FACIAL RIDUCO", costoUnitario: "199.4"},
+{codigo: "03RIN0001", nombre: "LEN LIC STOP YAMAHA 45D7", costoUnitario: "52"},
+{codigo: "03RIN0003", nombre: "PORTA LAMPARA DIREC SUZ EN125", costoUnitario: "38.9"},
+{codigo: "03RIN0004", nombre: "PORTA LAMPARA DIRECC 45D7 YAM", costoUnitario: "38.82"},
+{codigo: "03RIN0006", nombre: "ACOPLE DELANT DIREC SUZ GS125", costoUnitario: "67.35"},
+{codigo: "03RIN0012", nombre: "PORTA LAMPARA B8V1 / B1L1", costoUnitario: "52.25"},
+{codigo: "03RIN0013", nombre: "LENTE LICENCIA STOP BGK1 INY", costoUnitario: "104.872"},
+{codigo: "03TRQ0006", nombre: "FONDO BANDEJA CAR ANDR  290LT", costoUnitario: "866.9"},
+{codigo: "03TRQ0008", nombre: "PANTALLA PROT FAC RIDUCO PLUS", costoUnitario: "1445"},
+{codigo: "04AUT0516M", nombre: "PLANCHA BORDO E2 H79 ULC POSTV", costoUnitario: "95378.7999999999"},
+{codigo: "04AUT0610M", nombre: "PANEL PTA TRAS DER E2 X52", costoUnitario: "38820"},
+{codigo: "04AUT0611M", nombre: "PANEL PTA TRAS IZQ E2 X52", costoUnitario: "26596"},
+{codigo: "04AUT0629", nombre: "SOPORTE PARACHOQU TRAS DER L52", costoUnitario: "1899"},
+{codigo: "04AUT0630", nombre: "SOPORTE PARACHOQU TRAS IZQ L52", costoUnitario: "1899"},
+{codigo: "04AUT0636M", nombre: "PUERTA COFRE B52", costoUnitario: "10776"},
+{codigo: "04AUT0637M", nombre: "PIE TRASERO INFERIOR DER L52", costoUnitario: "4967"},
+{codigo: "04AUT0638M", nombre: "PIE TRASERO INFERIOR IZQ L52", costoUnitario: "4967"},
+{codigo: "04AUT0681M", nombre: "PIE MEDIO INFERIOR DER BL52", costoUnitario: "6113"},
+{codigo: "04AUT0682M", nombre: "PIE MEDIO INFERIOR IZQ BL52", costoUnitario: "6112"},
+{codigo: "04AUT0727M", nombre: "PANEL PTA DEL DER E1-E2 X52 PV", costoUnitario: "60993.28"},
+{codigo: "04AUT0732M", nombre: "PANEL PTA TRAS IZQ E2 X52 PV", costoUnitario: "55347.7"},
+{codigo: "04AUT0745", nombre: "GUIA PARACHOQ DEL DER BL52 PV", costoUnitario: "1688"},
+{codigo: "04AUT0746", nombre: "GUIA PARACHOQ DEL IZQ BL52 PV", costoUnitario: "1688"},
+{codigo: "04AUT0749", nombre: "SOPORTE PARAC TRAS DER L52 PV", costoUnitario: "2968"},
+{codigo: "04AUT0750", nombre: "SOPORTE PARAC TRAS IZQ L52 PV", costoUnitario: "2968"},
+{codigo: "04AUT0763", nombre: "PIE DELANTERO SUP DER X52 PV", costoUnitario: "1998.3"},
+{codigo: "04AUT0764", nombre: "PIE DELANTERO SUP IZQ X52 PV", costoUnitario: "1998.3"},
+{codigo: "04AUT0776", nombre: "ESTRIBO DELANTERO DERECHO H79", costoUnitario: "4190.87"},
+{codigo: "04AUT0778", nombre: "EMBELLECEDOR ESTRIB TRA DERH79", costoUnitario: "4852.44"},
+{codigo: "04AUT0779", nombre: "EMBELLECEDOR ESTRIB TRA IZQH79", costoUnitario: "4852.44"},
+{codigo: "04AUT0783M", nombre: "PILAR LAT COFRE IZQUIERD ECE 9", costoUnitario: "25960.18"},
+{codigo: "04AUT0814", nombre: "PILAR LAT COFRE DER ECE 95 PV", costoUnitario: "38047"},
+{codigo: "04AUT0818", nombre: "PIE DEL DER BL52 SL TREK", costoUnitario: "2653"},
+{codigo: "04AUT0819", nombre: "PIE DEL IZQ BL52 SL TREK", costoUnitario: "2653"},
+{codigo: "04AUT0838M", nombre: "PILR LAT COFR DER H79 PH2 3150", costoUnitario: "22418.31"},
+{codigo: "04AUT0839M", nombre: "PILR LAT COFR IZQ H79 PH2 3150", costoUnitario: "22666.54"},
+{codigo: "04AUT0848", nombre: "PIE MEDIO SUPERIR DER H79 3150", costoUnitario: "2879.24"},
+{codigo: "04AUT0850", nombre: "SOPORTE PARACHOQU TRAS DER B52", costoUnitario: "1374"},
+{codigo: "04AUT0851", nombre: "SOPORTE PARACHOQU TRAS IZQ B52", costoUnitario: "1374"},
+{codigo: "04AUT0852", nombre: "SOPORTE PARACH TRAS DER B52 PV", costoUnitario: "1590"},
+{codigo: "04AUT0853", nombre: "SOPORTE PARACH TRAS IZQ B52 PV", costoUnitario: "1590"},
+{codigo: "04AUT0854", nombre: "GUIA PARACHOQ TRAS IZQ H79 PV", costoUnitario: "3760"},
+{codigo: "04AUT0855", nombre: "GUIA PARACHOQ TRAS DER H79 PV", costoUnitario: "3760"},
+{codigo: "04AUT0888M", nombre: "CUSTODIA AR DER L52 EXCLU EG", costoUnitario: "7906"},
+{codigo: "04AUT0889M", nombre: "CUSTODIA AR IZQ L52 EXCLUS EG", costoUnitario: "7906"},
+{codigo: "04AUT0894M", nombre: "CUSTODIA TRAS DER B52 TREK EG", costoUnitario: "9079"},
+{codigo: "04AUT0900M", nombre: "PLANCHA BORDO AB X52 EG273", costoUnitario: "145466"},
+{codigo: "04AUT0911", nombre: "ABSORBEDOR DEL PARACH H79 PH2 GP1065 PV", costoUnitario: "8291.26"},
+{codigo: "04AUT0912", nombre: "ABSORBEDOR TRAS PARACH H79 PH2 GP1065 PV", costoUnitario: "24621"},
+{codigo: "04AUT0913M", nombre: "PASORUEDA TRASERO DER B52 GP88", costoUnitario: "1944"},
+{codigo: "04AUT0914M", nombre: "PASORUEDA TRASERO IZQ B52 GP88", costoUnitario: "1944"},
+{codigo: "04AUT0915M", nombre: "PASORUEDA TRAS DER B52 GP88 PV", costoUnitario: "2471"},
+{codigo: "04AUT0921M", nombre: "COQUILLA INFERIOR PDB X52 PH2", costoUnitario: "6873"},
+{codigo: "04AUT0922M", nombre: "COQUILLA SUPERIOR PDB X52 PH2", costoUnitario: "2546"},
+{codigo: "04AUT0923M", nombre: "REJILLA INF PARAC X52PH2 C093", costoUnitario: "14315"},
+{codigo: "04AUT0924M", nombre: "REJILLA CALANDRA X52PH2 C002", costoUnitario: "16598"},
+{codigo: "04AUT0925M", nombre: "PARACH TRAS B52 Ph2 CAM RADAR", costoUnitario: "43084"},
+{codigo: "04AUT0926M", nombre: "PARACHOQUE TRASERO B52 PH2 CAM", costoUnitario: "43751"},
+{codigo: "04AUT0927M", nombre: "PARACH TRAS BCROSS X52PH2 RAD", costoUnitario: "45940"},
+{codigo: "04AUT0929M", nombre: "PARACH TRAS L52 PH2 CAM RADAR", costoUnitario: "48817"},
+{codigo: "04AUT0930M", nombre: "PARACHOQUE TRASERO L52 PH2 CAM", costoUnitario: "49206"},
+{codigo: "04AUT0932M", nombre: "PARACH DELANTERO BCROSS X52PH2", costoUnitario: "59565"},
+{codigo: "04AUT0933M", nombre: "PARACHOQUE DELANTERO X52PH2", costoUnitario: "53175"},
+{codigo: "04AUT0935M", nombre: "ABSORBEDOR DEL BCROSS PH2", costoUnitario: "8052"},
+{codigo: "04AUT0936M", nombre: "ABSORBEDOR DEL X52 PH2", costoUnitario: "9325"},
+{codigo: "04AUT0937M", nombre: "ABSORBEDOR TRAS DER BCRO PH2", costoUnitario: "5461"},
+{codigo: "04AUT0938M", nombre: "ABSORBEDOR TRAS IZQ BCRO PH2", costoUnitario: "6166"},
+{codigo: "04AUT0939", nombre: "PASO RUEDA DEL IZQ X52 PH2", costoUnitario: "1406"},
+{codigo: "04AUT0940", nombre: "PASO RUEDA DEL DER X52 PH2", costoUnitario: "1406"},
+{codigo: "04AUT0949M", nombre: "PP DEL IZQ TEP NEGRO X52PH2", costoUnitario: "34643"},
+{codigo: "04AUT0950M", nombre: "PP DEL DER TEP NEGRO X52PH2", costoUnitario: "34637"},
+{codigo: "04AUT0955M", nombre: "REJILLA CAPO X52", costoUnitario: "17379"},
+{codigo: "04AUT0964M", nombre: "PARACHOQUE TRASERO E2 H79 SENSOR DIAM. 24.9 PV", costoUnitario: "55698"},
+{codigo: "04AUT0970M", nombre: "CUSTDIA TRAS IZQ B52 LATIN NEG", costoUnitario: "9079"},
+{codigo: "04AUT0973", nombre: "SOPORTE PARACHOQU TRAS DER HJD", costoUnitario: "2682"},
+{codigo: "04AUT0974", nombre: "SOPORTE PARACHOQU TRAS IZQ HJD", costoUnitario: "2598"},
+{codigo: "04AUT0975", nombre: "SOPORTE PARACHOQUE DEL DER HJD", costoUnitario: "2340"},
+{codigo: "04AUT0976", nombre: "SOPORTE PARACHOQUE DEL IZQ HJD", costoUnitario: "2320"},
+{codigo: "04AUT0977M", nombre: "PARACHOQUE TRAS SUP HJD", costoUnitario: "25401"},
+{codigo: "04AUT0978M", nombre: "PARACHOQUE TRAS SUP HJD 2 RAD", costoUnitario: "26674"},
+{codigo: "04AUT0979M", nombre: "PARACHOQUE TRAS SUP HJD 4 RAD", costoUnitario: "29642"},
+{codigo: "04AUT0980M", nombre: "PARACHOQUE TRAS INF HJD", costoUnitario: "21368"},
+{codigo: "04AUT0981M", nombre: "PARACHOQUE TRAS INF HJD RADAR", costoUnitario: "25448"},
+{codigo: "04AUT0982M", nombre: "PARACHOQUE DEL SUP HJD", costoUnitario: "30731"},
+{codigo: "04AUT0983M", nombre: "PARACHOQUE DEL SUP HJD RAD", costoUnitario: "34798"},
+{codigo: "04AUT0984M", nombre: "PARACHOQUE DEL INF IZQ HJD", costoUnitario: "6607"},
+{codigo: "04AUT0985M", nombre: "PARACHOQUE DEL INF DER HJD", costoUnitario: "6607"},
+{codigo: "04AUT0986M", nombre: "EMBELLECEDOR DEL INF HJD NEGRO", costoUnitario: "15535"},
+{codigo: "04AUT0987M", nombre: "EMBELLECEDOR DEL INF HJD PLATA", costoUnitario: "15280"},
+{codigo: "04AUT0988M", nombre: "ENS EMBELLEC DEL SUP HJD NEGR", costoUnitario: "27478"},
+{codigo: "04AUT1000", nombre: "COQUILLA SUPERIOR BL52 EG273 PV", costoUnitario: "1539.76"},
+{codigo: "04AUT1004M", nombre: "PLANCHA BORDO AB X52 EG273 PV", costoUnitario: "169128"},
+{codigo: "04AUT1006M", nombre: "CUSTODIA AR IZQ L52 EXCLUS EG PV", costoUnitario: "8767"},
+{codigo: "04AUT1018", nombre: "GUIA PARACH DEL DER BL52 PH2", costoUnitario: "1906"},
+{codigo: "04AUT1019", nombre: "GUIA PARACH DEL IZQ BL52 PH2", costoUnitario: "1906"},
+{codigo: "04AUT1023M", nombre: "REJILLA INF PAR X52PH2 C093 PV", costoUnitario: "17232"},
+{codigo: "04AUT1034M", nombre: "PARACH DELANT LCROSS X52PH2 PV", costoUnitario: "59128"},
+{codigo: "04AUT1036M", nombre: "ABSORBEDOR DEL X52 PH2 PV", costoUnitario: "11191"},
+{codigo: "04AUT1039", nombre: "PASO RUEDA DEL IZQ X52 PH2 PV", costoUnitario: "1853"},
+{codigo: "04AUT1040", nombre: "PASO RUEDA DEL DER X52 PH2 PV", costoUnitario: "1853"},
+{codigo: "04AUT1042M", nombre: "PP DEL DER E0 X52PH2 PV", costoUnitario: "32018.49"},
+{codigo: "04AUT1049M", nombre: "PP DEL IZQ TEP NEGRO X52PH2 PV", costoUnitario: "47418.06"},
+{codigo: "04AUT1058", nombre: "GUIA PARAC DEL DER BL52 PH2 PV", costoUnitario: "2400"},
+{codigo: "04AUT1059", nombre: "GUIA PARAC DEL IZQ BL52 PH2 PV", costoUnitario: "2400"},
+{codigo: "04AUT1060M", nombre: "PIE MEDIO INF DER H79 3150 MX5", costoUnitario: "5142.28"},
+{codigo: "04AUT1061M", nombre: "PIE MEDIO INF IZQ H79 3150 MX5", costoUnitario: "5142.28"},
+{codigo: "04AUT1066M", nombre: "EMBELLECED ESTR TRAS DER H79F2", costoUnitario: "4852.44"},
+{codigo: "04AUT1068", nombre: "VISERA PDB X52 EG PH2", costoUnitario: "6915"},
+{codigo: "04AUT1078", nombre: "GUIA AIRE SUP DER HJD EXPO", costoUnitario: "1268"},
+{codigo: "04AUT1079", nombre: "GUIA AIRE SUP IZQ HJD EXPO", costoUnitario: "1417"},
+{codigo: "04AUT1080", nombre: "GUIA AIRE INF DER HJD EXPO", costoUnitario: "2243"},
+{codigo: "04AUT1081", nombre: "GUIA AIRE SUP DER HJD", costoUnitario: "1608"},
+{codigo: "04AUT1082", nombre: "GUIA AIRE SUP IZQ HJD", costoUnitario: "1781"},
+{codigo: "04AUT1086", nombre: "ESTRIBO TRAS DER H79 PHII PV", costoUnitario: "35804"},
+{codigo: "04AUT1087", nombre: "ESTRIBO TRAS IZQ H79 PHII PV", costoUnitario: "35804"},
+{codigo: "04AUT1098M", nombre: "ENS EMBELLECE TRAS HJD NEGR PV", costoUnitario: "15688.4"},
+{codigo: "04AUT1100", nombre: "SOPORTE PARACH TRAS DER HJD PV", costoUnitario: "3230"},
+{codigo: "04AUT1101", nombre: "SOPORTE PARACH TRAS IZQ HJD PV", costoUnitario: "3230"},
+{codigo: "04AUT1102", nombre: "SOPORTE PARACHO DEL DER HJD PV", costoUnitario: "2993"},
+{codigo: "04AUT1103", nombre: "SOPORTE PARACHO DEL IZQ HJD PV", costoUnitario: "2993"},
+{codigo: "04AUT1104M", nombre: "PARACHOQUE TRAS SUP HJD PV", costoUnitario: "22182.2"},
+{codigo: "04AUT1106M", nombre: "PARACHOQ TRAS SUP HJD 4 RAD PV", costoUnitario: "31780"},
+{codigo: "04AUT1108M", nombre: "PARACHOQ TRAS INF HJD RADAR PV", costoUnitario: "25781"},
+{codigo: "04AUT1109M", nombre: "PARACHOQUE DEL SUP HJD PV", costoUnitario: "30857"},
+{codigo: "04AUT1110M", nombre: "PARACHOQUE DEL SUP HJD RAD PV", costoUnitario: "27692.7"},
+{codigo: "04AUT1111M", nombre: "PARACHOQUE DEL INF IZQ HJD PV", costoUnitario: "7142"},
+{codigo: "04AUT1112M", nombre: "PARACHOQUE DEL INF DER HJD PV", costoUnitario: "7142"},
+{codigo: "04AUT1115M", nombre: "ENS EMBELL DEL SUP HJD NEGR PV", costoUnitario: "21229.7"},
+{codigo: "04AUT1125M", nombre: "ENSAMBL PDB DIV1 HJD RAD010 PV", costoUnitario: "145262"},
+{codigo: "04AUT1127", nombre: "GUIA AIRE SUP DER HJD EXPO PV", costoUnitario: "1204.6"},
+{codigo: "04AUT1128", nombre: "GUIA AIRE SUP IZQ HJD EXPO PV", costoUnitario: "1204.6"},
+{codigo: "04AUT1129", nombre: "GUIA AIRE INF DER HJD EXPO PV", costoUnitario: "1993"},
+{codigo: "04AUT1133M", nombre: "PPTA DEL DER U79 ECE95 E2 EXP", costoUnitario: "42546"},
+{codigo: "04AUT1144M", nombre: "PIE MEDIO INF DERECHO U79 EXP", costoUnitario: "10665"},
+{codigo: "04AUT1146M", nombre: "PIE MEDIO INF IZQUIERDO U79 EX", costoUnitario: "10665"},
+{codigo: "04AUT1162", nombre: "TAPA GANCHO TRAS HJD GRIS PV", costoUnitario: "2300"},
+{codigo: "04AUT1163", nombre: "TAPA GANCHO DEL DER HJD NEG PV", costoUnitario: "2692"},
+{codigo: "04AUT1164", nombre: "TAPA GANCHO DEL IZQ HJD NEG PV", costoUnitario: "2692"},
+{codigo: "04AUT1165", nombre: "TAPA GANCH DEL DER HJD GRIS PV", costoUnitario: "3065"},
+{codigo: "04AUT1166", nombre: "TAPA GANCH DEL IZQ HJD GRIS PV", costoUnitario: "3065"},
+{codigo: "04AUT1167M", nombre: "EMB DEL SUP NEGRO HJD SIN TAPA", costoUnitario: "33544"},
+{codigo: "04AUT1175M", nombre: "PARACHOQUE TRASERO E1 H79 PV", costoUnitario: "50731"},
+{codigo: "04AUT1183M", nombre: "PARACH TRAS BCROSS X52PH2 RAD", costoUnitario: "48934"},
+{codigo: "04AUT1185M", nombre: "PARACH TRAS BCROSS PH2 PV", costoUnitario: "32781"},
+{codigo: "04AUT1186M", nombre: "PARAC TRAS BCROS X52PH2 RAD PV", costoUnitario: "36309"},
+{codigo: "04AUT1188M", nombre: "ENS EMBELLECEDOR TRAS HJD NEGR", costoUnitario: "20830"},
+{codigo: "04AUT1193M", nombre: "ENJO CTL PARAC TRAS E2 GRI PV", costoUnitario: "30473"},
+{codigo: "04AUT1194", nombre: "EMBELLEC TRAS DER H79 PHII PV", costoUnitario: "6421"},
+{codigo: "04AUT1195", nombre: "EMBELLEC TRAS IZQ H79 PHII PV", costoUnitario: "6421"},
+{codigo: "04AUT1196M", nombre: "ENS EMBE TRAS HJD MY2324", costoUnitario: "40644"},
+{codigo: "04AUT1198M", nombre: "ENS EMBE TRAS HJD MY2324 PV ST", costoUnitario: "36399"},
+{codigo: "04AUT1199M", nombre: "ENS EMBE DEL SUP HJD MY2324", costoUnitario: "50886"},
+{codigo: "04AUT1208M", nombre: "ENSAMBLE PLANCHA DE  BORDO BBB", costoUnitario: "81027"},
+{codigo: "04AUT1209M", nombre: "PARACHOQUE TRAS DER SUP BBB", costoUnitario: "10355"},
+{codigo: "04AUT1210M", nombre: "PARACHOQUE TRAS IZQ SUP BBB", costoUnitario: "10355"},
+{codigo: "04AUT1212M", nombre: "PARACHOQ TRAS INF BBB OUTSIDER", costoUnitario: "30845"},
+{codigo: "04AUT1213M", nombre: "PARACHOQUE DEL SUP BBB", costoUnitario: "26747"},
+{codigo: "04AUT1214M", nombre: "PARACHOQUE DEL INF BBB", costoUnitario: "28007"},
+{codigo: "04AUT1215", nombre: "SOPORTE PARACHOQUE TRAS DER BBB", costoUnitario: "2642"},
+{codigo: "04AUT1216", nombre: "SOPORTE PARACHOQUE TRAS IZQ BBB", costoUnitario: "2642"},
+{codigo: "04AUT1217M", nombre: "EMB PASO RUEDA DEL DER BBB", costoUnitario: "11920"},
+{codigo: "04AUT1218M", nombre: "EMB PASO RUEDA DEL IZQ BBB", costoUnitario: "11920"},
+{codigo: "04AUT1219M", nombre: "EMB PASO RUEDA TRA DER BBB", costoUnitario: "12069"},
+{codigo: "04AUT1220M", nombre: "EMB PASO RUEDA TRA IZQ BBB", costoUnitario: "12069"},
+{codigo: "04AUT1221M", nombre: "PASO RUEDA DEL DER BBB", costoUnitario: "11489"},
+{codigo: "04AUT1222M", nombre: "PASO RUEDA DEL IZQ BBB", costoUnitario: "9960"},
+{codigo: "04AUT1223M", nombre: "PANEL PUERTA TRA DER BBB", costoUnitario: "18641"},
+{codigo: "04AUT1224M", nombre: "PANEL PUERTA TRA IZQ BBB", costoUnitario: "18641"},
+{codigo: "04AUT1225M", nombre: "REJILLA CAPO CENTRAL BBB", costoUnitario: "19002"},
+{codigo: "04AUT1228M", nombre: "PANEL PUERTA DEL DER MANUAL BBB", costoUnitario: "41144"},
+{codigo: "04AUT1229M", nombre: "PANEL PUERTA DEL IZQ MANUAL BBB", costoUnitario: "41144"},
+{codigo: "04AUT1230M", nombre: "PANEL PUERTA DEL DER ELECTRICO BBB", costoUnitario: "41144"},
+{codigo: "04AUT1231M", nombre: "PANEL PUERTA DEL IZQ ELECTRICO BBB", costoUnitario: "41144"},
+{codigo: "04AUT1234M", nombre: "PLANCHA DE BORD HJD PHASE OUT", costoUnitario: "104196"},
+{codigo: "04AUT1237M", nombre: "PANEL PUERTA TRAS DER HJD PHASE OUT", costoUnitario: "27110"},
+{codigo: "04AUT1238M", nombre: "PANEL PUERTA TRAS IZQ HJD PHASE OUT", costoUnitario: "27110"},
+{codigo: "04AUT1241M", nombre: "PIE MEDIO INF DER POLE 32 BBB", costoUnitario: "4605"},
+{codigo: "04AUT1242M", nombre: "PIE MEDIO INF IZQ POLE 32 BBB", costoUnitario: "4605"},
+{codigo: "04AUT1243M", nombre: "PIE TRASERO DER POLE 32 BBB", costoUnitario: "8581"},
+{codigo: "04AUT1244M", nombre: "PIE TRASERO IZQ POLE 32 BBB", costoUnitario: "8581"},
+{codigo: "04AUT1245M", nombre: "PIE DELANTERO DER POLE 32 BBB", costoUnitario: "13280"},
+{codigo: "04AUT1246M", nombre: "PIE DELANTERO IZQ POLE 32 BBB", costoUnitario: "13280"},
+{codigo: "04AUT1258M", nombre: "EMB PASO RUEDA TRA IZQ BBB PV", costoUnitario: "25260"},
+{codigo: "04AUT1274", nombre: "TAPA GANCH DEL DER HJDMY2324PV", costoUnitario: "5463"},
+{codigo: "04AUT1275", nombre: "TAPA GANCH DEL IZQ HJDMY2324PV", costoUnitario: "7846"},
+{codigo: "04AUT1283M", nombre: "PNL PTA DEL DER HJD DIV2 TLATEP DBL CTRA PHOUT PV", costoUnitario: "73519"},
+{codigo: "04AUT1289M", nombre: "PNL PTA DEL DER ELEC BLANCO XBBMY26", costoUnitario: "55402"},
+{codigo: "04AUT1290M", nombre: "PNL PTA DEL DER ELEC AZUL XBBMY26", costoUnitario: "54568"},
+{codigo: "04AUT1291M", nombre: "PNL PTA DEL IZQ ELEC BLANCO XBBMY26", costoUnitario: "55402"},
+{codigo: "04INY0002", nombre: "MESA GRILL BLANCA", costoUnitario: "20380.72"},
+{codigo: "04INY0006", nombre: "TAPON HEMBRA S-P L:32 P.E.L.D.", costoUnitario: "341"},
+{codigo: "04INY0016", nombre: "CUBIERTA TORN PANEL-MARCO EVAP", costoUnitario: "53"},
+{codigo: "04INY0022", nombre: "GRAPA PLASTICA INYECTADA", costoUnitario: "38.39"},
+{codigo: "04INY0033", nombre: "TARRO 2 TAZAS", costoUnitario: "354.49"},
+{codigo: "04INY0059", nombre: "TAPA TARRO 2 TAZAS BEIGE", costoUnitario: "117.13"},
+{codigo: "04INY0147", nombre: "BASURERO RECTANG GRANDE BLANCO", costoUnitario: "6731.53"},
+{codigo: "04INY0148", nombre: "MESA GRILL ROJA", costoUnitario: "20849.57"},
+{codigo: "04INY0150", nombre: "BASURERO RECTANG PEQUE? BLANCO", costoUnitario: "3760.39"},
+{codigo: "04INY0175", nombre: "CUBETA HIELO TRANS (16 CAV)", costoUnitario: "655"},
+{codigo: "04INY0238", nombre: "SILLA SAMOA VERDE", costoUnitario: "15155.04"},
+{codigo: "04INY0523", nombre: "TAPON HEMBRA S-P L:60 P.E.L.D.", costoUnitario: "387"},
+{codigo: "04INY0768", nombre: "TARRO 1 TAZA", costoUnitario: "254.87"},
+{codigo: "04INY1162", nombre: "SILLA PIAZA ROJA", costoUnitario: "10730.71"},
+{codigo: "04INY1303", nombre: "SILLA SANTORINI BLANCA", costoUnitario: "12238.31"},
+{codigo: "04INY1323", nombre: "MESA RHONDA BLANCA", costoUnitario: "61571.34"},
+{codigo: "04INY1387", nombre: "BASURERO RECTANG GRANDE VERDE", costoUnitario: "7087"},
+{codigo: "04INY1400", nombre: "BASURERO RECTANG PEQUE? VERDE", costoUnitario: "3972"},
+{codigo: "04INY1440", nombre: "SILLA SIN BRAZOS BLANCA", costoUnitario: "10437.3"},
+{codigo: "04INY2109", nombre: "SILLA FLORES VERDE", costoUnitario: "23260.45"},
+{codigo: "04INY2168", nombre: "TAPA PORTAHERRAMIENTAS X9197-A", costoUnitario: "632"},
+{codigo: "04INY2331", nombre: "TAPA BASURERO GRANDE VERDE ENS", costoUnitario: "3173.85"},
+{codigo: "04INY2332", nombre: "TAPA BASURERO GRANDE BLANC ENS", costoUnitario: "3081.89"},
+{codigo: "04INY2338", nombre: "TAPA BASURERO PEQ VERDE ENS", costoUnitario: "2405.93"},
+{codigo: "04INY2339", nombre: "TAPA BASURERO PEQ BLANCO ENS", costoUnitario: "2338.13"},
+{codigo: "04INY2436", nombre: "CODO DRENAJE", costoUnitario: "390"},
+{codigo: "04INY2564", nombre: "GUARDACADENA XB 242", costoUnitario: "2941"},
+{codigo: "04INY2679", nombre: "ESPACIADOR BISAGRA INTERMEDIA", costoUnitario: "38"},
+{codigo: "04INY2680", nombre: "ESPACIADOR BISAGRA INFERIOR", costoUnitario: "46"},
+{codigo: "04INY2681", nombre: "TOPE PUERTA POLAR FZ MODIFICAD", costoUnitario: "259"},
+{codigo: "04INY2771", nombre: "CAJON GRANDE GRIS HUMO", costoUnitario: "3906.78"},
+{codigo: "04INY2772", nombre: "A 63 CCOL EST NG IND ESP LIOF", costoUnitario: "292"},
+{codigo: "04INY2776", nombre: "A 63 CCOL EST DORMET IND ESP LIOF", costoUnitario: "338"},
+{codigo: "04INY2780", nombre: "A 63 JV EST DOR OCR IND ESP LIOF", costoUnitario: "337"},
+{codigo: "04INY2782", nombre: "A 63 LIS NG IND ESP LIOF", costoUnitario: "390"},
+{codigo: "04INY2789", nombre: "TAPA A 70 LG DORAD MET IND ESP", costoUnitario: "303"},
+{codigo: "04INY2802", nombre: "C 53 CCOL EST NG IND ESP LIOF", costoUnitario: "328"},
+{codigo: "04INY2803", nombre: "C 53 CCOL EST VER1 IND ESP LIOF", costoUnitario: "327"},
+{codigo: "04INY2813", nombre: "C53CCOL EST AZVAI IND ESP LIOF", costoUnitario: "394"},
+{codigo: "04INY2843", nombre: "C 66 CCOL EST RJ IND ESP LIOF", costoUnitario: "610"},
+{codigo: "04INY2929", nombre: "C 53 CCOL EST RJ IND ESP LIOF", costoUnitario: "350"},
+{codigo: "04INY3054", nombre: "ARMARIO BLANCO", costoUnitario: "51542.52"},
+{codigo: "04INY3140", nombre: "ESTIBA PERF 8/CL/ST/PP/NG", costoUnitario: "14162.2"},
+{codigo: "04INY3147", nombre: "ESTIBA LISA 13/SL/ST/PP/AZ", costoUnitario: "68330.27"},
+{codigo: "04INY3227", nombre: "TAPA CARCASA DER ASIENTO INGO", costoUnitario: "202.62"},
+{codigo: "04INY3233", nombre: "TAPA CARCASA IZQ ASIENTO INGO", costoUnitario: "202.62"},
+{codigo: "04INY3241", nombre: "GUARDACADENA XB 475", costoUnitario: "2394.6"},
+{codigo: "04INY3274", nombre: "GUARDAFANGO DELANTERO GS 500", costoUnitario: "6393.49"},
+{codigo: "04INY3292", nombre: "GUARDAFANGO DELANTERO 1SV", costoUnitario: "9180"},
+{codigo: "04INY3293", nombre: "CAJA BATERIA 1SV", costoUnitario: "2848"},
+{codigo: "04INY3359", nombre: "MESA TOBAGO", costoUnitario: "14607.79"},
+{codigo: "04INY3405", nombre: "TAPA LAT DER SPLENDOR NXG PVTA", costoUnitario: "6041.89"},
+{codigo: "04INY3406", nombre: "TAPA LAT IZQ SPLENDOR NXG PVTA", costoUnitario: "6041.89"},
+{codigo: "04INY3407", nombre: "CARENAJE SPLENDOR NXG PVTA", costoUnitario: "7346"},
+{codigo: "04INY3411", nombre: "TAPA LATERAL DER ECO DLX PVTA", costoUnitario: "4316"},
+{codigo: "04INY3412", nombre: "TAPA LATERAL IZQ ECO DLX PVTA", costoUnitario: "4314"},
+{codigo: "04INY3424", nombre: "COVER FRAME CENTER SUZ FD125", costoUnitario: "2339"},
+{codigo: "04INY3429", nombre: "TAPA TARRO 1.5 TAZAS BAZAR", costoUnitario: "197.72"},
+{codigo: "04INY3495", nombre: "CARENAJE ECO DELUXE PVTA", costoUnitario: "5980"},
+{codigo: "04INY3520", nombre: "ESTIBA PERF 13/CL/ST/PP/NG", costoUnitario: "75098.52"},
+{codigo: "04INY3550", nombre: "ALETA TANQUE IZQ CBF 125 POSV", costoUnitario: "10613"},
+{codigo: "04INY3567", nombre: "CUBIERTA BISAGRA AND NEGRA", costoUnitario: "227"},
+{codigo: "04INY3568", nombre: "A 53 EST CAF IND CAR MAR", costoUnitario: "249"},
+{codigo: "04INY3569", nombre: "A 53  EST RJ  IND CAR MAR", costoUnitario: "186"},
+{codigo: "04INY3572", nombre: "A 63 EST CAF IND CAR MAR", costoUnitario: "399"},
+{codigo: "04INY3576", nombre: "A 77 EST CAF IND CAR MAR", costoUnitario: "372"},
+{codigo: "04INY3578", nombre: "A 77 EST VER IND CAR MAR", costoUnitario: "249.91"},
+{codigo: "04INY3579", nombre: "A 77 EST DOR IND CAR MAR", costoUnitario: "363"},
+{codigo: "04INY3631", nombre: "TAPON POLAR  - NEG", costoUnitario: "111"},
+{codigo: "04INY3652", nombre: "TAPA TARRO 2 TAZAS BAZAR", costoUnitario: "328.08"},
+{codigo: "04INY3663", nombre: "PROBETA DE PLASTICO HERO", costoUnitario: "1442"},
+{codigo: "04INY3697", nombre: "CUBIERTA BISAGRA POLAR NEGRO", costoUnitario: "311"},
+{codigo: "04INY3783", nombre: "DISPENSADOR JRT BLANC-NEG STRX", costoUnitario: "13735"},
+{codigo: "04INY3785", nombre: "DISPENSADOR HBT BLANC-NEG STRX", costoUnitario: "14952"},
+{codigo: "04INY3786", nombre: "DISPENS BLA-NEG SCOTTFOLD STRX", costoUnitario: "17927"},
+{codigo: "04INY3829", nombre: "TAPON HEMBRA MEXICO", costoUnitario: "521"},
+{codigo: "04INY3835", nombre: "ESTIBA LISA 8/SL/ST/PP/NG", costoUnitario: "62192.29"},
+{codigo: "04INY3846", nombre: "BANERA BAZAR COLORES VARIOS", costoUnitario: "5672.34"},
+{codigo: "04INY3847", nombre: "MULTIUSOS COLORES VARIOS", costoUnitario: "2836"},
+{codigo: "04INY3848", nombre: "TAPA+ETI TOA HUM HUGGONE&DONE", costoUnitario: "137.5"},
+{codigo: "04INY3890", nombre: "TAPA LATERAL DER B72 POSTVENTA", costoUnitario: "6309"},
+{codigo: "04INY3891", nombre: "TAPA LATERAL IZQ B72 POSTVENTA", costoUnitario: "6338"},
+{codigo: "04INY3914", nombre: "CARENAJE K09 POSVENTA", costoUnitario: "7584"},
+{codigo: "04INY3957", nombre: "EST PLA DOUB AZUL INSERT LOGO", costoUnitario: "84118.36"},
+{codigo: "04INY3977", nombre: "GUIA DE AIRE DERECHA B72 POS", costoUnitario: "4604"},
+{codigo: "04INY3978", nombre: "GUIA DE AIRE IZQUIERDA B72 POS", costoUnitario: "4623"},
+{codigo: "04INY3981", nombre: "GUARDAFANGO DELANTERO 1SV POS", costoUnitario: "11708"},
+{codigo: "04INY3995", nombre: "MESA TRINIDAD WENGUE", costoUnitario: "12935.15"},
+{codigo: "04INY3996", nombre: "CAJA MULTISERVI COLORES VARIOS", costoUnitario: "3992.88"},
+{codigo: "04INY3998", nombre: "CAJA 18 PERFORA COLORES VARIOS", costoUnitario: "10405.01"},
+{codigo: "04INY3999", nombre: "MESA RHONDA WENGUE", costoUnitario: "71440.41"},
+{codigo: "04INY4030", nombre: "TAPA F66 LIOFI CAF MET INDESP", costoUnitario: "598"},
+{codigo: "04INY4035", nombre: "TAPA A 63 LG DORADO IND ESP", costoUnitario: "184.02"},
+{codigo: "04INY4046", nombre: "ACOPLE HEMBRA ENS", costoUnitario: "675"},
+{codigo: "04INY4095", nombre: "GUARDABARRO DEL NO.1 FD125 POS", costoUnitario: "8303"},
+{codigo: "04INY4096", nombre: "GUARDABARRO DEL NO.2 FD125 POS", costoUnitario: "8123"},
+{codigo: "04INY4097", nombre: "GUARDACADENA FD125 POS", costoUnitario: "3295"},
+{codigo: "04INY4098", nombre: "GUARDACADENA SUZUKI GE110 POS", costoUnitario: "3609"},
+{codigo: "04INY4099", nombre: "GUARDACADENA XB242 POS", costoUnitario: "3214"},
+{codigo: "04INY4102", nombre: "GUARDACADENA X9197 POS", costoUnitario: "3491"},
+{codigo: "04INY4103", nombre: "GUARDABARRO TRASERO X542C POS", costoUnitario: "3770"},
+{codigo: "04INY4106", nombre: "GUARDAFANGO TRASERO XF123 POS", costoUnitario: "6638"},
+{codigo: "04INY4107", nombre: "SOPORTE GUARDAF TRAS XF123 POS", costoUnitario: "4749"},
+{codigo: "04INY4108", nombre: "EXTENSION GUARD TRAS XF123 POS", costoUnitario: "4764"},
+{codigo: "04INY4127", nombre: "CHASIS DISPENSA PRISMATI NUEVO", costoUnitario: "4159.5"},
+{codigo: "04INY4133", nombre: "REMATE SUP CON MB/GE POL NEG", costoUnitario: "2236"},
+{codigo: "04INY4134", nombre: "REMATE INF REF MB/GE POL NEG", costoUnitario: "2088"},
+{codigo: "04INY4135", nombre: "REMATE SUPERIOR FZ ANDR NEGRO", costoUnitario: "2252"},
+{codigo: "04INY4137", nombre: "SILLA IMPERIAL MIMBRE WENGUE", costoUnitario: "23512.87"},
+{codigo: "04INY4162", nombre: "CUBIERTA EVAP POSTE CYCLE 320", costoUnitario: "4919"},
+{codigo: "04INY4163", nombre: "CUBIERTA EVAP POSTE CYCLE 390", costoUnitario: "6115"},
+{codigo: "04INY4180", nombre: "ORGANIZ ZAPATOS MOD.DOBLE", costoUnitario: "15093.56"},
+{codigo: "04INY4189", nombre: "REMATE INF FF NEGRO ANDR 290", costoUnitario: "2633"},
+{codigo: "04INY4198", nombre: "CUBIERTA TERMISTOR", costoUnitario: "127"},
+{codigo: "04INY4199", nombre: "O 66 LIS NEG IND ESP LIOF", costoUnitario: "416"},
+{codigo: "04INY4200", nombre: "BANDEJA CARNES ANDR 290 LT ENS", costoUnitario: "5954"},
+{codigo: "04INY4201", nombre: "PUERTA EVAP ANDR 290 LT ENS", costoUnitario: "10129"},
+{codigo: "04INY4202", nombre: "MARCO EVAP ANDROMEDA 290 LT", costoUnitario: "2725"},
+{codigo: "04INY4203", nombre: "TAP+ETI TOA HUM HUGG O&D ARGEN", costoUnitario: "141.37"},
+{codigo: "04INY4216", nombre: "GUARDACADENA GSX125Q", costoUnitario: "2888"},
+{codigo: "04INY4337", nombre: "GANCHO SELLA BOLS PLAS VERDE", costoUnitario: "187.41"},
+{codigo: "04INY4338", nombre: "GANCHO SELLA BOLS PLAS ROJO #1", costoUnitario: "187.41"},
+{codigo: "04INY4340", nombre: "GANCHO SELLA BOLS PLAS VIOLETA", costoUnitario: "187.41"},
+{codigo: "04INY4346", nombre: "GANCHO SELLA BOLS PLAS DORADO", costoUnitario: "187.41"},
+{codigo: "04INY4377", nombre: "ORGANIZADOR 2G-2P", costoUnitario: "48598.37"},
+{codigo: "04INY4390", nombre: "ESTIBA DOUFASE CI/ST/AZUL", costoUnitario: "93388.6"},
+{codigo: "04INY4400", nombre: "CAJA AGRO EXPORT FONDOLIVIANO", costoUnitario: "3072.23999999999"},
+{codigo: "04INY4401", nombre: "C77CCOL EST RJ CER INDESP LIOF", costoUnitario: "492"},
+{codigo: "04INY4409", nombre: "N 66 CCOL LIS NG IND ESP LIOF", costoUnitario: "280"},
+{codigo: "04INY4415", nombre: "A 63 LIS VER VM IND CAR MAR", costoUnitario: "272"},
+{codigo: "04INY4416", nombre: "A 63 LIS RJ VM IND CAR MAR", costoUnitario: "312"},
+{codigo: "04INY4428", nombre: "TAPA DOMO DIA 32 BLANCA PT", costoUnitario: "30"},
+{codigo: "04INY4432", nombre: "KIT MASCARA PROT FACIAL RIDUCO", costoUnitario: "2803"},
+{codigo: "04INY4438", nombre: "GUARDAFAN DEL CB 110 POSTV 757", costoUnitario: "7901"},
+{codigo: "04INY4440", nombre: "TAPA DOMO DIA 32 FUCSIA REX WOMAN PT", costoUnitario: "38"},
+{codigo: "04INY4442", nombre: "TAPA DOMO DIA  32MM MORADO PERLADO PT", costoUnitario: "33"},
+{codigo: "04INY4443", nombre: "TAPA DOMO DIA 32MM AZUL PERLADO PT", costoUnitario: "29"},
+{codigo: "04INY4445", nombre: "C77 CCOL EST MORA INDESP LIOF", costoUnitario: "490"},
+{codigo: "04INY4446", nombre: "C 66 CCOL EST MORA IND ESP LIOF", costoUnitario: "523"},
+{codigo: "04INY4447", nombre: "C 53 CCOL EST MOR IND ESP LIOF", costoUnitario: "310"},
+{codigo: "04INY4451", nombre: "REM INF FF NEGRO ANDR TEX P003", costoUnitario: "2218"},
+{codigo: "04INY4454", nombre: "REM SUP FF POLAR NEGRO P005", costoUnitario: "2879"},
+{codigo: "04INY4455", nombre: "REM JAL POKET FZ NEGRO P003", costoUnitario: "3217"},
+{codigo: "04INY4456", nombre: "REM JAL POKET FF NEGRO HS P007", costoUnitario: "3389"},
+{codigo: "04INY4459", nombre: "KIT MASCA PROT FAC RIDUCO PLUS", costoUnitario: "3052.7"},
+{codigo: "04INY4461", nombre: "GUARDAFANGO DELANTERO ECO100", costoUnitario: "17810"},
+{codigo: "04INY4462", nombre: "TAPA LATERAL TRAS DER ECO 100", costoUnitario: "4350"},
+{codigo: "04INY4463", nombre: "TAPA LATERAL TRAS IZQ ECO 100", costoUnitario: "4350"},
+{codigo: "04INY4466", nombre: "REM INT FZ ANDRO NEGRO P006", costoUnitario: "2364"},
+{codigo: "04INY4467", nombre: "REM SUP FF ANDRO NEGRO P007", costoUnitario: "2351"},
+{codigo: "04INY4470", nombre: "D 63 TH LIS NG IND ESP LIOF", costoUnitario: "329"},
+{codigo: "04INY4479", nombre: "GUARDACADENA XF123 MODIFICADA", costoUnitario: "4108"},
+{codigo: "04INY4491", nombre: "GUARDABARROS DELANTERO BAJAJ", costoUnitario: "9020"},
+{codigo: "04INY4495", nombre: "TAPA BASURERO PEQ NEGRO ENS", costoUnitario: "1830.94"},
+{codigo: "04INY4496", nombre: "PROTECTOR MOFLE BBL INCOL", costoUnitario: "7673"},
+{codigo: "04INY4498", nombre: "ANAQUEL DESLIZABLE  PSC", costoUnitario: "2674"},
+{codigo: "04INY4500", nombre: "ANAQUEL ANGOSTO ANDROME 300 LT", costoUnitario: "1574"},
+{codigo: "04INY4501", nombre: "ANAQUEL ANGOSTO ANDROMEDA", costoUnitario: "1509"},
+{codigo: "04INY4502", nombre: "ANAQUEL MEDIO ANDROMEDA", costoUnitario: "1313"},
+{codigo: "04INY4509", nombre: "REM SUP FZ NG ANDRO 290 LT TEX", costoUnitario: "2365"},
+{codigo: "04INY4520", nombre: "TAPA A63 MAR DOR VMOLIN INDCAR", costoUnitario: "274"},
+{codigo: "04INY4536", nombre: "COLA TRASERA DERECHA ECODELUX", costoUnitario: "3188"},
+{codigo: "04INY4537", nombre: "COLA TRASERA IZQUIERD ECODELUX", costoUnitario: "3188"},
+{codigo: "04INY4538", nombre: "TAPA LATERAL DERECHA ECODELUX", costoUnitario: "4103"},
+{codigo: "04INY4539", nombre: "TAPA LATERAL IZQUIERDA ECODELUX", costoUnitario: "4103"},
+{codigo: "04INY4540", nombre: "COLA CENTRAL TRASERA ECODELUX", costoUnitario: "1609"},
+{codigo: "04INY4541", nombre: "ENS CAJA HERRAMIENTA ECODELUX", costoUnitario: "7803"},
+{codigo: "04INY4542", nombre: "SOPORTE ACOMPAÑANTE ECODELUX", costoUnitario: "23901"},
+{codigo: "04INY4543", nombre: "COLA TRASERA DERECHA ECO100", costoUnitario: "2709"},
+{codigo: "04INY4544", nombre: "COLA TRASERA IZQUIERDA ECO100", costoUnitario: "2661"},
+{codigo: "04INY4545", nombre: "COLA CENTRAL TRASERA ECO100", costoUnitario: "2382"},
+{codigo: "04INY4546", nombre: "GUARDAFANGO TRAS ECODELUX 100", costoUnitario: "11437"},
+{codigo: "04INY4547", nombre: "ENS CAJA HERRAMIENTA ECO100", costoUnitario: "7918"},
+{codigo: "04INY4548", nombre: "GUARDAFANGO DEL ECODELUX HERO", costoUnitario: "15525"},
+{codigo: "04INY4551", nombre: "TAPA ENVASE RECT 1.3LT MAGENTA", costoUnitario: "378.59"},
+{codigo: "04INY4559", nombre: "PERILLA CAJA CONTROL AND RETIQ", costoUnitario: "205"},
+{codigo: "04INY4560", nombre: "PUERTA EVAP AND ENS RETIQ", costoUnitario: "8200"},
+{codigo: "04INY4563", nombre: "TAPA HERRAMIENTAS DER ECODELUX", costoUnitario: "2301"},
+{codigo: "04INY4564", nombre: "TAPA HERRAMIENTAS DER ECO100", costoUnitario: "1799"},
+{codigo: "04INY4571", nombre: "GUARDACADENA SUPERIOR ECODELUX", costoUnitario: "3241"},
+{codigo: "04INY4572", nombre: "GUARDACADENA INFERIOR ECODELUX", costoUnitario: "5688"},
+{codigo: "04INY4574", nombre: "GUARDAFANGO DELANTERO 45D", costoUnitario: "8710"},
+{codigo: "04INY4575", nombre: "CUBIERTA FAROLA DER B72", costoUnitario: "1714"},
+{codigo: "04INY4576", nombre: "CUBIERTA FAROLA IZQ B72", costoUnitario: "1714"},
+{codigo: "04INY4577", nombre: "GUARDAFANGO DELANTERO 2 BF2", costoUnitario: "5368"},
+{codigo: "04INY4578", nombre: "CAJA BATERIA B72", costoUnitario: "2477"},
+{codigo: "04INY4579", nombre: "GUARDAFANGO DEL T115 1BN2", costoUnitario: "7220"},
+{codigo: "04INY4580", nombre: "COMP G/FANGO DEL 2 T115", costoUnitario: "5368"},
+{codigo: "04INY4582", nombre: "PROTECT MANILAR YW125 DER", costoUnitario: "2087"},
+{codigo: "04INY4583", nombre: "PROTECT MANILAR YW125 IZQ", costoUnitario: "2087"},
+{codigo: "04INY4588", nombre: "GUARDAFANGO DEL YW125", costoUnitario: "5132"},
+{codigo: "04INY4589", nombre: "TAPA LATERAL YW125 DER", costoUnitario: "6988"},
+{codigo: "04INY4590", nombre: "TAPA LATERAL YW125 IZQ", costoUnitario: "6988"},
+{codigo: "04INY4591", nombre: "PROTECTOR MOFLE BA4 PV", costoUnitario: "17302"},
+{codigo: "04INY4592", nombre: "GUARDAFANGO DELANTERO BA4", costoUnitario: "5800"},
+{codigo: "04INY4599", nombre: "PROTECTOR MOFLE BBE2", costoUnitario: "8320"},
+{codigo: "04INY4601", nombre: "GUARDAFANGO DELANTERO BGK2", costoUnitario: "7323"},
+{codigo: "04INY4602", nombre: "GUARDAFANGO TRASERO BGK2", costoUnitario: "6279"},
+{codigo: "04INY4606", nombre: "MONOCARCASA ALBERT T6 GRIS", costoUnitario: "38158.3"},
+{codigo: "04INY4609", nombre: "M66JV MIMB DOROCR INDESP LIOF", costoUnitario: "452"},
+{codigo: "04INY4614", nombre: "M66JV MIMB VERDESC INDESP LIOF", costoUnitario: "544"},
+{codigo: "04INY4619", nombre: "GUARDAFANGO DELANTERO 45D POS", costoUnitario: "8999"},
+{codigo: "04INY4620", nombre: "CUBIERTA FAROLA IZQ B72 POS", costoUnitario: "1754"},
+{codigo: "04INY4621", nombre: "CUBIERTA FAROLA DER B72 POS", costoUnitario: "1755"},
+{codigo: "04INY4624", nombre: "PERILLA CYC CAJ CONT IMP AZUL", costoUnitario: "259"},
+{codigo: "04INY4625", nombre: "O 66 LIS VER IND ESP LIOF", costoUnitario: "476"},
+{codigo: "04INY4627", nombre: "TAPA DOMO DIA 32 NEGRO REXONA MAN PT", costoUnitario: "30"},
+{codigo: "04INY4631", nombre: "TAPA F 66 GL VERDE IND ESP", costoUnitario: "585"},
+{codigo: "04INY4645", nombre: "M77 JV MIMB DOROCR INDESP LIOF", costoUnitario: "360"},
+{codigo: "04INY4647", nombre: "A 53 EST DOR IND CAR MAR", costoUnitario: "200"},
+{codigo: "04INY4652", nombre: "ANAQUEL BOTELL ANDR 300 LT SS", costoUnitario: "2410"},
+{codigo: "04INY4653", nombre: "ANAQ BOTELL ANDR SS", costoUnitario: "2153"},
+{codigo: "04INY4663", nombre: "TAPA ESPALDAR 21IN", costoUnitario: "14200"},
+{codigo: "04INY4664", nombre: "ASIENTO APILABLE 400MM", costoUnitario: "3550.1"},
+{codigo: "04INY4676", nombre: "C 53 CCOL EST VER2 IND ESP LIOF", costoUnitario: "323"},
+{codigo: "04INY4682", nombre: "CARENAJE ECODELUX HERO NUEVO", costoUnitario: "11489"},
+{codigo: "04INY4685", nombre: "TAPA FLIP-TOP 27MM BLANCO", costoUnitario: "40"},
+{codigo: "04INY4700", nombre: "A 63 VMP LIS DOR PREM IND CAR MAR", costoUnitario: "332"},
+{codigo: "04INY4702", nombre: "A 63 LIS NG VM IND CAR MAR", costoUnitario: "268"},
+{codigo: "04INY4705", nombre: "SOPORTE DISPLAY FZ NEGRO HIPS", costoUnitario: "622.89"},
+{codigo: "04INY4706", nombre: "CAJA DISPLAY FZ NEGRO HIPS", costoUnitario: "966.88"},
+{codigo: "04INY4714", nombre: "GUARDAFANGO TRASERO BGK3", costoUnitario: "5981"},
+{codigo: "04INY4719", nombre: "D 63 TH LIS DOR IND ESP LIOF", costoUnitario: "184"},
+{codigo: "04INY4728", nombre: "CAJON LEGUMB AND GRIS 209 SS", costoUnitario: "8804"},
+{codigo: "04INY4746", nombre: "GUARDAFANGO DEL BGK2 POS", costoUnitario: "7323"},
+{codigo: "04INY4748", nombre: "C77 CCOL EST AZ CL IND ESP LIOF", costoUnitario: "516"},
+{codigo: "04INY4750", nombre: "CAJA FRUVER 18CM CON PISO LISO", costoUnitario: "26000"},
+{codigo: "04INY4751", nombre: "TAPA DOMO DIAMETRO 32MM BLANCA RIDUCO", costoUnitario: "39.4"},
+{codigo: "04INY4753", nombre: "CAP DOMO DIA 32MM MORADO PERLA", costoUnitario: "29.2"},
+{codigo: "04INY4754", nombre: "CAP DOMO DIA 32MM AZUL PERLADO", costoUnitario: "29.2"},
+{codigo: "04INY4755", nombre: "CAP DOMO DIA 32MM NEG REXO MAN", costoUnitario: "44"},
+{codigo: "04INY4757", nombre: "BASE SILLIN XB 242 UMO", costoUnitario: "6854"},
+{codigo: "04INY4760", nombre: "GANCHO SELLA BOLS PLAS FUCSIA", costoUnitario: "187.41"},
+{codigo: "04INY4761", nombre: "TAPA + ETIQ HUGGIES MAGNUM", costoUnitario: "145"},
+{codigo: "04INY4762", nombre: "TAPA + ETIQ HUGGIES-BILINGUE", costoUnitario: "145"},
+{codigo: "04INY4768", nombre: "GUARDAFANGO DEL 2 D24", costoUnitario: "5368"},
+{codigo: "04INY4772", nombre: "CAN ABA STECO 21 60%V40%REC-NG", costoUnitario: "11000"},
+{codigo: "04INY4774", nombre: "RETENEDOR DE ENERGIA", costoUnitario: "465"},
+{codigo: "04INY4775", nombre: "M 66 JV MIMB VAINC IND ESP LIOF", costoUnitario: "340.93"},
+{codigo: "04INY4776", nombre: "M 66 JV MIMB NAR IND ESP LIOF", costoUnitario: "340.93"},
+{codigo: "04INY4777", nombre: "M 66 JV MIMB CHOC IND ESP LIOF", costoUnitario: "340.93"},
+{codigo: "04INY4779", nombre: "GUARDAFANGO DEL 2 D24 POS", costoUnitario: "5368"},
+{codigo: "04INY4780", nombre: "GUARDAFANGO TRAS BUB", costoUnitario: "8811"},
+{codigo: "04INY4782", nombre: "ANAQUEL MULTIUSOS FZ NIRVANA", costoUnitario: "3733"},
+{codigo: "04INY4783", nombre: "ANAQUEL MULTIUSOS FF NIRVANA", costoUnitario: "3781"},
+{codigo: "04INY4784", nombre: "ANAQUEL ANGOSTO NIRVANA", costoUnitario: "2126"},
+{codigo: "04INY4785", nombre: "CAJON VEGETALES NIRVANA", costoUnitario: "15350"},
+{codigo: "04INY4786", nombre: "N 77 CCOL LIS AGMAR IND ESP LIOF", costoUnitario: "516"},
+{codigo: "04INY4787", nombre: "C1 53CCOL OND RJBUE INDESP LIO", costoUnitario: "353"},
+{codigo: "04INY4789", nombre: "C1 53CCOL OND AZVAI INDESPLIOF", costoUnitario: "353"},
+{codigo: "04INY4792", nombre: "C1 53CCOL OND CAFDOR INDESPLIO", costoUnitario: "353"},
+{codigo: "04INY4793", nombre: "C1 53CCOL OND NGBUE INDESP LIO", costoUnitario: "353"},
+{codigo: "04INY4798", nombre: "C PRO25 -50%V50%REC-NG NV MEZC", costoUnitario: "11000"},
+{codigo: "04INY4809", nombre: "GUARDACADENA SUP HERO PV", costoUnitario: "5946"},
+{codigo: "04INY4810", nombre: "GUARDACADENA INF HERO PV", costoUnitario: "8780"},
+{codigo: "04INY4822", nombre: "GUARDF TRAS ECODLX/ECO100 PV", costoUnitario: "11973"},
+{codigo: "04INY4824", nombre: "GUARDF DEL ECODLX PV", costoUnitario: "26883"},
+{codigo: "04INY4830", nombre: "PERILLA CAJA CONTROL NIRV", costoUnitario: "111.3"},
+{codigo: "04INY4831", nombre: "ENDCAP TOP FZ REM SUP FZ NEG", costoUnitario: "3146"},
+{codigo: "04INY4832", nombre: "END CAP BOT FF REM INF FF NEGR", costoUnitario: "3001"},
+{codigo: "04INY4833", nombre: "END CAP MID REM INT CONG NEGRO", costoUnitario: "3068"},
+{codigo: "04INY4834", nombre: "END CAP MID REM INT REF NEGRO", costoUnitario: "2872"},
+{codigo: "04INY4835", nombre: "DISP BLA-NG SCOTTFOLD KCC LAO", costoUnitario: "21793"},
+{codigo: "04INY4836", nombre: "DISP BLAN-NEG JRT KCC LAO", costoUnitario: "18696"},
+{codigo: "04INY4853", nombre: "TAPA FLIP-TOP 27MM BLANCO PT", costoUnitario: "40"},
+{codigo: "04INY4855", nombre: "F66CCOL LIS CAFMET INDESP LIOF", costoUnitario: "340.93"},
+{codigo: "04INY4870", nombre: "C.ABA18-50%V 50%REC-NG PELET", costoUnitario: "13306"},
+{codigo: "04INY4871", nombre: "PERILLA NUEVO POTENCIOM AND", costoUnitario: "229"},
+{codigo: "04INY4873", nombre: "TAPA ESPALDAR  21 IN ANTIR", costoUnitario: "15678"},
+{codigo: "04INY4882", nombre: "C53CCOL OND RJ BUE INDESP LIOF", costoUnitario: "403"},
+{codigo: "04INY4883", nombre: "PROTECTOR MOFLE D24", costoUnitario: "8950"},
+{codigo: "04INY4888", nombre: "C53CCOL OND VERMET INDESP LIOF", costoUnitario: "403"},
+{codigo: "04INY4893", nombre: "C53CCOL OND NEGBUE INDESP LIOF", costoUnitario: "403"},
+{codigo: "04INY4895", nombre: "C66CCOL OND RJ BUE INDESP LIOF", costoUnitario: "430"},
+{codigo: "04INY4900", nombre: "A 63 EST ROJO IND CAR MAR", costoUnitario: "312"},
+{codigo: "04INY4901", nombre: "A 77 EST RJ IND CAR MAR", costoUnitario: "438"},
+{codigo: "04INY4904", nombre: "DISPENSADOR DE ESPUMA-FOAM", costoUnitario: "18454"},
+{codigo: "04INY4907", nombre: "DISP SPRAY JABON (SOAP) 400 ML", costoUnitario: "15358"},
+{codigo: "04INY4908", nombre: "DISP SPRAY ANTIBAC (HD SANITIZER) 400 ML", costoUnitario: "15358"},
+{codigo: "04INY4911", nombre: "DISP SPRAY JABON (SOAP) 800-1000 ML", costoUnitario: "17266"},
+{codigo: "04INY4914", nombre: "CAJA 55 RIDUCO NEGRA", costoUnitario: "5426"},
+{codigo: "04INY4915", nombre: "CAJA 55 RIDUCO AMARILLA", costoUnitario: "5471"},
+{codigo: "04INY4916", nombre: "CAJA 35 RIDUCO NEGRA", costoUnitario: "7173"},
+{codigo: "04INY4917", nombre: "CAJA 35 RIDUCO AMARILLA", costoUnitario: "7246"},
+{codigo: "04INY4918", nombre: "TAPON 55 RIDUCO NEGRO", costoUnitario: "190"},
+{codigo: "04INY4919", nombre: "TAPON 55 RIDUCO AMARILLO", costoUnitario: "230"},
+{codigo: "04INY4920", nombre: "CUBIERTA 55 RIDUCO NEGRA DERECHA", costoUnitario: "5431"},
+{codigo: "04INY4921", nombre: "CUBIERTA 55 RIDUCO AMARILLA DERECHA", costoUnitario: "6513"},
+{codigo: "04INY4922", nombre: "PERI CAJA CONT NIRVANA 90° IZQ", costoUnitario: "205"},
+{codigo: "04INY4930", nombre: "PRO25 50%V50%R-VG NV MEZC PEL", costoUnitario: "11000"},
+{codigo: "04INY4931", nombre: "TAPA FLIP 107.3 HUGGIES BL KI", costoUnitario: "135"},
+{codigo: "04INY4935", nombre: "COMPLEMENTO SOPORTE MATRICULA NEGRO", costoUnitario: "9625"},
+{codigo: "04INY4937", nombre: "COMPLEMENTO GUARDAFANGO DEL ROJO", costoUnitario: "21041"},
+{codigo: "04INY4938", nombre: "COMPLEMENTO GUARDAFANGO DEL BLANCO", costoUnitario: "21784"},
+{codigo: "04INY4939", nombre: "COMPLEMENTO GUARDAFANGO DEL BEIGE", costoUnitario: "24871"},
+{codigo: "04INY4948", nombre: "DISP ESPUMA 1000ML SIN BOMBA", costoUnitario: "17226"},
+{codigo: "04INY4950", nombre: "DISP SPRAY 400 ML SIN BOMBA", costoUnitario: "15358"},
+{codigo: "04INY4959", nombre: "A 63 VM LIS CAF IN CAR MAR", costoUnitario: "312"},
+{codigo: "04INY4960", nombre: "COMPLEMENTO VISOR FRONTAL NEGRO K79K", costoUnitario: "21041"},
+{codigo: "04INY4961", nombre: "COMPLEMENTO VISOR FRONTAL ROJO K79K", costoUnitario: "21041"},
+{codigo: "04INY4962", nombre: "COMPLEMENTO VISOR FRONTAL BLANCO K79K", costoUnitario: "21041"},
+{codigo: "04INY4963", nombre: "COMPLEMENTO VISOR FRONTAL BEIGE K79K", costoUnitario: "21041"},
+{codigo: "04INY4964", nombre: "COMPLEMENTO GUARDAFANGO DEL NEGRO KRHW", costoUnitario: "21041"},
+{codigo: "04INY4966", nombre: "COMPLEMENTO GUARDAFANGO DEL BLANCO KRHW", costoUnitario: "21041"},
+{codigo: "04INY4970", nombre: "Com Cola KRHW NG INY FA", costoUnitario: "20503"},
+{codigo: "04INY4976", nombre: "Com Cub Tanq RH KRHW NG INY FA", costoUnitario: "20503"},
+{codigo: "04INY4977", nombre: "Com Cub Tanq LH KRHW NG INY FA", costoUnitario: "20503"},
+{codigo: "04INY4978", nombre: "Com Cub Tanq RH KRHW BL INY FA", costoUnitario: "20503"},
+{codigo: "04INY4979", nombre: "Com Cub Tanq LH KRHW BL INY FA", costoUnitario: "20503"},
+{codigo: "04INY4986", nombre: "Com Cub Tanq RH K79K BL INY FA", costoUnitario: "20503"},
+{codigo: "04INY4987", nombre: "Com Cub Tanq LH K79K BL INY FA", costoUnitario: "20503"},
+{codigo: "04INY4988", nombre: "Com Cub Tanq RH K79K BG INY FA", costoUnitario: "20503"},
+{codigo: "04INY4989", nombre: "Com Cub Tanq LH K79K BG INY FA", costoUnitario: "20503"},
+{codigo: "04INY4994", nombre: "O 66 CCOL LIS VD DESC IND ESP LIOF", costoUnitario: "439"},
+{codigo: "04INY4995", nombre: "O 66 CCOL LIS CAF MET IND ESP LIOF", costoUnitario: "439"},
+{codigo: "04INY4996", nombre: "O 53 CCOL LIS CAF MET IND ESP LIOF", costoUnitario: "403"},
+{codigo: "04INY4997", nombre: "O 53 CCOL LIS VD DESC IND ESP LIOF", costoUnitario: "403"},
+{codigo: "05INY0185", nombre: "ASIENTO SANITARIO BASIC BLANCO", costoUnitario: "1078"},
+{codigo: "05INY0349", nombre: "MEXICHEM TAPON DE 110", costoUnitario: "3104"},
+{codigo: "05INY0478", nombre: "BUCHA DO FUNDO DO CESTO VMW", costoUnitario: "183"},
+{codigo: "05INY0479", nombre: "BUCHA IMPELLER / AGIPELLER", costoUnitario: "196"},
+{codigo: "05INY0482", nombre: "DRIVE BLOCK - HUB. BASKET", costoUnitario: "374"},
+{codigo: "05INY0483", nombre: "PINO DOBRADICA", costoUnitario: "142"},
+{codigo: "05INY0488", nombre: "MINI PROPELLER WHIRLPOOL", costoUnitario: "137"},
+{codigo: "05INY0489", nombre: "TAMPA ALMOFADA DE AR BEST", costoUnitario: "130"},
+{codigo: "05INY0652", nombre: "CONJUNT FILTRO W BLUE TNAC", costoUnitario: "1365"},
+{codigo: "05INY0689", nombre: "FALSA VÁLVULA", costoUnitario: "267"},
+{codigo: "05INY0715", nombre: "ASIENTO SANIT COMODOR BLANCO", costoUnitario: "2919"},
+{codigo: "05INY0729", nombre: "TOPE TORRE TRASERA APILADOR JUGA", costoUnitario: "1197"},
+{codigo: "05INY0730", nombre: "TOPE TORRE APILADOR IZQUIERDA JUGA", costoUnitario: "1197"},
+{codigo: "05INY0744", nombre: "CAN BAV 13*1 LT MPV BV CO-7677", costoUnitario: "2180"},
+{codigo: "05INY0749", nombre: "TAPA IMPELLER WHIRPOOL GRIS", costoUnitario: "135"},
+{codigo: "05INY0764", nombre: "CAN BV 13*1 MPV CO7677 AMBAR T", costoUnitario: "1638"},
+{codigo: "05INY0781", nombre: "CAN BAV 30*0.33 MPVIR CO 34-63", costoUnitario: "2189"},
+{codigo: "05INY0783", nombre: "CANAST 150 ROJ 40059 DOW 83_15", costoUnitario: "5019"},
+{codigo: "05INY0784", nombre: "PUE CA 150 ROJ 40059 DOW 83_15", costoUnitario: "4128"},
+{codigo: "05INY0812", nombre: "GUIA TIRANTE PP MODIFICADA 2", costoUnitario: "65"},
+{codigo: "05INY0817", nombre: "BALL SUSPENSION", costoUnitario: "72"},
+{codigo: "05INY0820", nombre: "MINI PROPELLER GRIS HACEB", costoUnitario: "141"},
+{codigo: "05INY0838", nombre: "PLUG COPA 2.0", costoUnitario: "54"},
+{codigo: "05INY0843", nombre: "TANQ RADIADOR ENTRADA X52-H79", costoUnitario: "592"},
+{codigo: "05INY0844", nombre: "TANQ RADIADOR SALIDA X52-H79", costoUnitario: "589"},
+{codigo: "05INY0860", nombre: "MINI IMPELLER WHP COPA 2.0", costoUnitario: "174"},
+{codigo: "05INY0865", nombre: "LIFTER HWI COPA 2.0", costoUnitario: "308"},
+{codigo: "05INY0866", nombre: "CUBIE POST BIS NG DER COPA 2.0", costoUnitario: "307"},
+{codigo: "05INY0867", nombre: "CUBIE POST BIS NG IZQ COPA 2.0", costoUnitario: "307"},
+{codigo: "05INY0870", nombre: "CONSOLA HACEB BLACK QUASAR", costoUnitario: "2159"},
+{codigo: "05INY0871", nombre: "TAPA TRASERA WHI GRAY", costoUnitario: "2473"},
+{codigo: "05INY0872", nombre: "TAPA TRASERA WHI BLACK", costoUnitario: "2562"},
+{codigo: "05INY0873", nombre: "TAPA TRASERA HACEB NEGRA", costoUnitario: "1022"},
+{codigo: "05INY0875", nombre: "CUBIERT POST BIS TP DER COPA2.OVE", costoUnitario: "300"},
+{codigo: "05INY0876", nombre: "CUBIERT POST BIS TP IZQ COPA2.", costoUnitario: "300"},
+{codigo: "05INY0877", nombre: "CONSOLA SHELL HWI COPA 2.0", costoUnitario: "984"},
+{codigo: "05INY0878", nombre: "POSTE BISAGRA COPA 2.0", costoUnitario: "186"},
+{codigo: "05INY0890", nombre: "ANEL DESLIZANTE NUEVO DISEÑO", costoUnitario: "330"},
+{codigo: "05INY0891", nombre: "CONJUNTO FILTRO HWI GRIS", costoUnitario: "1812"},
+{codigo: "05INY0917", nombre: "CONSOLA HACEB COAL QUASAR", costoUnitario: "2227"},
+{codigo: "05INY0919", nombre: "TEE 200 EXTRUCOL M.NUEVO", costoUnitario: "24000"},
+{codigo: "05INY0929", nombre: "CANASTILLA BAVARIA 250ML", costoUnitario: "2505"},
+{codigo: "05INY0963", nombre: "CONSOLA WHI AGIPELLER RECUP", costoUnitario: "1202"},
+{codigo: "05INY0969", nombre: "CONJUNTO PERILLA BOTERO", costoUnitario: "484"},
+{codigo: "05INY0970", nombre: "CONJUNTO FILTRO BOTERO", costoUnitario: "906"},
+{codigo: "05INY0973", nombre: "POSTE BISAGRA BOTERO", costoUnitario: "303"},
+{codigo: "05INY0974", nombre: "CAME EXT SOPORTE MOTOR 37°", costoUnitario: "328"},
+{codigo: "05INY0978", nombre: "LEVA ART COPA 39° POKA YOKE", costoUnitario: "157"},
+{codigo: "05INY0979", nombre: "LEVA ART COPA 37° POKA YOKE", costoUnitario: "157"},
+{codigo: "05INY0980", nombre: "ENS CONSOLA NIA ANALOGICA", costoUnitario: "3458"},
+{codigo: "05INY0981", nombre: "CONJUN FILTRO INT HWI COPA 2.0", costoUnitario: "1500"},
+{codigo: "05INY0982", nombre: "CONJUN FILT INT HACEB COPA 2.0", costoUnitario: "1500"},
+{codigo: "05INY1003", nombre: "ENSAM CONSOLA NIAGARA DIGITAL", costoUnitario: "3458"},
+{codigo: "05RIN0043", nombre: "BASE LUZ TRASERA KRHM XR 150", costoUnitario: "0"},
+
+        ];
+
+        // 🚀 INICIALIZACIÓN
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('fecha').valueAsDate = new Date();
+            document.getElementById('tarifaMOHoraActual').value = tarifas.manoObraHora;
+            document.getElementById('tarifaActualDisplay').textContent = formatCurrency(tarifas.manoObraHora);
+            cargarDatos();
+            document.addEventListener('click', ocultarTodasSugerencias);
+            document.getElementById('codigoPieza').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') { e.preventDefault(); seleccionarPieza(); }
+            });
+        });
+
+        // 💰 CONTROL DE TARIFAS
+        function actualizarTarifaTemporal() {
+            tarifaTemporal = parseFloat(document.getElementById('tarifaMOHoraActual').value) || tarifas.manoObraHora;
+            document.getElementById('tarifaActualDisplay').textContent = formatCurrency(tarifaTemporal);
+            calcularPreview();
+        }
+
+        // 💾 CARGA DE DATOS
+        function cargarDatos() {
+            registros = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('reproceso:')) {
+                    try { 
+                        const registro = JSON.parse(localStorage.getItem(key));
+                        registros.push(registro); 
+                    } catch(e) {
+                        console.error('Error al cargar registro:', e);
+                    }
+                }
+            }
+            registros.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+            cargarMapaSugerencias();
+            actualizarUI();
+        }
+
+        // 🧠 MAPA DE SUGERENCIAS INTELIGENTE
+        function cargarMapaSugerencias() {
+            mapaSugerencias = {
+                cliente: [...CLIENTES_PREDEFINIDOS],
+                motivoNoConformidad: [...MOTIVOS_NO_CONFORMIDAD],
+                lotesAfectados: [],
+                seccionOrigenProblema: [...SECCIONES_ORIGEN]
+            };
+            
+            registros.forEach(registro => {
+                // Cliente (solo agregar si no está en predefinidos)
+                if (registro.cliente && !mapaSugerencias.cliente.includes(registro.cliente)) {
+                    mapaSugerencias.cliente.push(registro.cliente);
+                }
+                
+                // Motivo (solo agregar si no está en predefinidos)
+                if (registro.motivoNoConformidad && !mapaSugerencias.motivoNoConformidad.includes(registro.motivoNoConformidad)) {
+                    mapaSugerencias.motivoNoConformidad.push(registro.motivoNoConformidad);
+                }
+                
+                // Lotes
+                if (registro.lotesAfectados && !mapaSugerencias.lotesAfectados.includes(registro.lotesAfectados)) {
+                    mapaSugerencias.lotesAfectados.push(registro.lotesAfectados);
+                }
+                
+                // Sección (solo agregar si no está en predefinidos)
+                if (registro.seccionOrigenProblema && !mapaSugerencias.seccionOrigenProblema.includes(registro.seccionOrigenProblema)) {
+                    mapaSugerencias.seccionOrigenProblema.push(registro.seccionOrigenProblema);
+                }
+            });
+            
+            Object.keys(mapaSugerencias).forEach(campo => mapaSugerencias[campo].sort());
+        }
+
+        // 🔍 AUTOCOMPLETADO CÓDIGO PIEZA
+        function autocompletarCodigo() {
+            const input = document.getElementById('codigoPieza');
+            const valor = input.value.toUpperCase().trim();
+            const contenedor = document.getElementById('sugerenciasCodigo');
+            seleccionarPieza();
+            
+            if (valor.length < 3) { contenedor.style.display = 'none'; return; }
+            const sugerencias = BASE_DATOS_PIEZAS.filter(p => p.codigo.toUpperCase().includes(valor)).slice(0, 10);
+            
+            if (sugerencias.length === 0) { contenedor.style.display = 'none'; return; }
+            
+            contenedor.innerHTML = sugerencias.map(pieza => `
+                <div class="codigo-item" onclick="seleccionarCodigoCompleto('${pieza.codigo}')" onmouseover="this.classList.add('selected')" onmouseout="this.classList.remove('selected')">
+                    <div class="font-bold text-emerald-800 text-lg">${pieza.codigo}</div>
+                    <div class="text-xs text-gray-600">${pieza.nombre.substring(0, 40)}${pieza.nombre.length > 40 ? '...' : ''}</div>
+                    <div class="text-xs font-semibold text-emerald-700">${formatCurrency(pieza.costoUnitario)}</div>
+                </div>
+            `).join('');
+            contenedor.style.display = 'block';
+            contenedor.style.top = `${input.offsetHeight + 4}px`;
+        }
+
+        function seleccionarCodigoCompleto(codigo) {
+            document.getElementById('codigoPieza').value = codigo;
+            seleccionarPieza();
+            document.getElementById('sugerenciasCodigo').style.display = 'none';
+        }
+
+        function seleccionarPieza() {
+            const codigoInput = document.getElementById('codigoPieza');
+            const codigo = codigoInput.value.trim().toUpperCase();
+            const pieza = BASE_DATOS_PIEZAS.find(p => p.codigo.toUpperCase() === codigo);
+            
+            if (pieza) {
+                document.getElementById('nombrePieza').value = pieza.nombre;
+                document.getElementById('costoUnitarioPieza').value = pieza.costoUnitario;
+                codigoInput.style.backgroundColor = '#ecfdf5';
+                codigoInput.style.borderColor = '#10b981';
+            } else if (codigo.length >= 3) {
+                document.getElementById('nombrePieza').value = '';
+                document.getElementById('costoUnitarioPieza').value = '';
+                codigoInput.style.backgroundColor = '#fef2f2';
+                codigoInput.style.borderColor = '#ef4444';
+            }
+            calcularPreview();
+        }
+
+        // 🎯 AUTOCOMPLETADO GENERAL
+        function mostrarSugerencias(campo) {
+            const input = document.getElementById(campo);
+            const valor = input.value.toLowerCase().trim();
+            
+            // Determinar el ID del contenedor de sugerencias
+            let contenedorId;
+            if (campo === 'cliente') {
+                contenedorId = 'sugerenciasCliente';
+            } else if (campo === 'motivoNoConformidad') {
+                contenedorId = 'sugerenciasMotivo';
+            } else if (campo === 'lotesAfectados') {
+                contenedorId = 'sugerenciasLotes';
+            } else if (campo === 'seccionOrigenProblema') {
+                contenedorId = 'sugerenciasSeccion';
+            }
+            
+            const contenedor = document.getElementById(contenedorId);
+            
+            if (!contenedor) {
+                console.error('Contenedor no encontrado:', contenedorId);
+                return;
+            }
+            
+            if (valor.length < 1) { 
+                contenedor.style.display = 'none'; 
+                return; 
+            }
+            
+            const sugerencias = mapaSugerencias[campo] || [];
+            const filtradas = sugerencias.filter(s => s.toLowerCase().includes(valor)).slice(0, 10);
+            
+            if (filtradas.length === 0) { 
+                contenedor.style.display = 'none'; 
+                return; 
+            }
+            
+            contenedor.innerHTML = filtradas.map(sugerencia => `
+                <div class="autocomplete-item" onclick="seleccionarSugerencia('${campo}', \`${sugerencia.replace(/`/g, '\\`')}\`)">
+                    ${sugerencia}
+                </div>
+            `).join('');
+            contenedor.style.display = 'block';
+            contenedor.style.top = `${input.offsetHeight}px`;
+        }
+
+        function seleccionarSugerencia(campo, valor) {
+            document.getElementById(campo).value = valor;
+            ocultarTodasSugerencias();
+            calcularPreview();
+        }
+
+        function ocultarTodasSugerencias(event) {
+            if (event && event.target.closest('.autocomplete-suggestions, .codigo-sugerencias, input')) {
+                return;
+            }
+            document.querySelectorAll('.autocomplete-suggestions, .codigo-sugerencias').forEach(s => s.style.display = 'none');
+        }
+
+        // 📊 ACTUALIZACIÓN UI
+        function actualizarUI() {
+            actualizarEstadisticas();
+            actualizarHistorial();
+        }
+
+        function actualizarEstadisticas() {
+            const total = registros.reduce((sum, r) => sum + (parseFloat(r.costoTotal) || 0), 0);
+            const cantidad = registros.length;
+            document.getElementById('statCantidad').textContent = cantidad.toLocaleString();
+            document.getElementById('statTotal').textContent = formatCurrency(total);
+            document.getElementById('statPromedio').textContent = cantidad > 0 ? formatCurrency(total / cantidad) : '$0';
+        }
+
+        // 📋 TABLA HISTORIAL
+        function actualizarHistorial() {
+            const container = document.getElementById('historialContainer');
+            if (registros.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-20 text-gray-400">
+                        <div class="text-8xl mb-8 mx-auto">📦</div>
+                        <p class="text-2xl font-semibold mb-2">Sin registros aún</p>
+                        <p class="text-lg">Agregue el primer reproceso para comenzar</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="overflow-x-auto rounded-2xl border-2 border-emerald-200">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
+                            <tr>
+                                <th class="p-4 text-left font-black rounded-tl-xl">Cliente</th>
+                                <th class="p-4 text-left font-black">Origen</th>
+                                <th class="p-4 text-left font-black">Motivo NC</th>
+                                <th class="p-4 text-left font-black">Lotes</th>
+                                <th class="p-4 text-left font-black">Sección</th>
+                                <th class="p-4 text-left font-black">Unid.Rev.</th>
+                                <th class="p-4 text-left font-black">Fecha</th>
+                                <th class="p-4 text-left font-black">Tipo</th>
+                                <th class="p-4 text-left font-black">Código</th>
+                                <th class="p-4 text-left font-black">Pieza</th>
+                                <th class="p-4 text-center font-black">Cant.</th>
+                                <th class="p-4 text-right font-black">Unit.</th>
+                                <th class="p-4 text-right font-black">Piezas</th>
+                                <th class="p-4 text-right font-black">M.O.</th>
+                                <th class="p-4 text-right font-black">Mat.</th>
+                                <th class="p-4 text-right font-black rounded-tr-xl">Total</th>
+                                <th class="p-4 text-center font-black">🗑️</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${registros.map((registro, index) => `
+                                <tr class="${index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-white'} hover:bg-emerald-100 transition-all border-b border-emerald-100">
+                                    <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.cliente || ''}">${registro.cliente || '-'}</td>
+                                    <td class="p-4 max-w-[140px] truncate" title="${registro.origenHallazgo || ''}">${registro.origenHallazgo || '-'}</td>
+                                    <td class="p-4 max-w-[140px] truncate" title="${registro.motivoNoConformidad || ''}">${registro.motivoNoConformidad || '-'}</td>
+                                    <td class="p-4 max-w-[120px] truncate" title="${registro.lotesAfectados || ''}">${registro.lotesAfectados || '-'}</td>
+                                    <td class="p-4 max-w-[120px] truncate" title="${registro.seccionOrigenProblema || ''}">${registro.seccionOrigenProblema || '-'}</td>
+                                    <td class="p-4 text-center font-semibold">${registro.unidadesRevisar || '-'}</td>
+                                    <td class="p-4 font-semibold">${registro.fecha}</td>
+                                    <td class="p-4">
+                                        <span class="bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">
+                                            ${registro.tipoReproceso || '-'}
+                                        </span>
+                                    </td>
+                                    <td class="p-4 font-mono font-semibold text-emerald-700">${registro.codigoPieza || '-'}</td>
+                                    <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.nombrePieza}">${registro.nombrePieza || '-'}</td>
+                                    <td class="p-4 text-center font-bold text-lg">${registro.cantidad || 0}</td>
+                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoUnitarioPieza || 0)}</td>
+                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoPiezas || 0)}</td>
+                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoManoObra || 0)}</td>
+                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoMateriales || 0)}</td>
+                                    <td class="p-4 text-right font-black text-2xl text-emerald-700">${formatCurrency(registro.costoTotal || 0)}</td>
+                                    <td class="p-4 text-center">
+                                        <button onclick="eliminarRegistro('${registro.id}')" class="text-red-500 hover:text-red-700 text-2xl hover:scale-110 transition-all p-2 rounded-xl hover:bg-red-100">🗑️</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        // 🧮 CÁLCULO AUTOMÁTICO
+        function calcularPreview() {
+            const cantidad = parseFloat(document.getElementById('cantidad').value) || 0;
+            const costoUnit = parseFloat(document.getElementById('costoUnitarioPieza').value) || 0;
+            const tiempo = parseFloat(document.getElementById('tiempoHoras').value) || 0;
+            const operarios = parseInt(document.getElementById('operarios').value) || 0;
+            const materiales = parseFloat(document.getElementById('costoMateriales').value) || 0;
+            const tarifaMO = tarifaTemporal || tarifas.manoObraHora;
+
+            const costoPiezas = cantidad * costoUnit;
+            const costoMO = tiempo * operarios * tarifaMO;
+            const total = costoPiezas + costoMO + materiales;
+
+            if (cantidad > 0 && costoUnit > 0) {
+                document.getElementById('previewCostos').style.display = 'block';
+                document.getElementById('previewPiezas').textContent = formatCurrency(costoPiezas);
+                document.getElementById('previewManoObra').textContent = formatCurrency(costoMO);
+                document.getElementById('previewMateriales').textContent = formatCurrency(materiales);
+                document.getElementById('previewTotal').textContent = formatCurrency(total);
+            } else {
+                document.getElementById('previewCostos').style.display = 'none';
+            }
+
+            if (tiempo > 0 && operarios > 0) {
+                document.getElementById('previewMO').textContent = `M.O.: ${formatCurrency(costoMO)}`;
+            } else {
+                document.getElementById('previewMO').textContent = '';
+            }
+        }
+
+        // 💾 GUARDAR REGISTRO
+        function guardarRegistro(event) {
+            event.preventDefault();
+            
+            // Obtener valores directamente del formulario
+            const cliente = document.getElementById('cliente').value.trim();
+            const origenHallazgo = document.getElementById('origenHallazgo').value;
+            const motivoNoConformidad = document.getElementById('motivoNoConformidad').value.trim();
+            const lotesAfectados = document.getElementById('lotesAfectados').value.trim();
+            const seccionOrigenProblema = document.getElementById('seccionOrigenProblema').value.trim();
+            const unidadesRevisar = parseInt(document.getElementById('unidadesRevisar').value) || 0;
+            const fecha = document.getElementById('fecha').value;
+            const tipoReproceso = document.getElementById('tipoReproceso').value;
+            const codigoPieza = document.getElementById('codigoPieza').value.trim();
+            const nombrePieza = document.getElementById('nombrePieza').value.trim();
+            const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
+            const operarios = parseInt(document.getElementById('operarios').value) || 0;
+            const tiempoHoras = parseFloat(document.getElementById('tiempoHoras').value) || 0;
+            const costoUnitarioPieza = parseFloat(document.getElementById('costoUnitarioPieza').value) || 0;
+            const costoMateriales = parseFloat(document.getElementById('costoMateriales').value) || 0;
+            const tarifaFinal = parseFloat(document.getElementById('tarifaMOHoraActual').value) || tarifas.manoObraHora;
+            const descripcion = document.getElementById('descripcion').value.trim();
+            
+            // Calcular costos
+            const costoPiezas = costoUnitarioPieza * cantidad;
+            const costoManoObra = tarifaFinal * tiempoHoras * operarios;
+            const costoTotal = costoManoObra + costoPiezas + costoMateriales;
+
+            const nuevoRegistro = {
+                id: Date.now().toString(),
+                cliente,
+                origenHallazgo,
+                motivoNoConformidad,
+                lotesAfectados,
+                seccionOrigenProblema,
+                unidadesRevisar,
+                fecha,
+                tipoReproceso,
+                codigoPieza,
+                nombrePieza,
+                cantidad,
+                operarios,
+                tiempoHoras,
+                costoUnitarioPieza,
+                tarifaManoObraHora: tarifaFinal,
+                costoPiezas,
+                costoManoObra,
+                costoMateriales,
+                costoTotal,
+                descripcion
+            };
+
+            // Guardar en localStorage
+            try {
+                localStorage.setItem(`reproceso:${nuevoRegistro.id}`, JSON.stringify(nuevoRegistro));
+                console.log('Registro guardado:', nuevoRegistro);
+            } catch(error) {
+                console.error('Error al guardar:', error);
+                alert('Error al guardar el registro. Por favor intente nuevamente.');
+                return;
+            }
+
+            // Recargar datos y actualizar UI
+            cargarDatos();
+            
+            // Resetear formulario
+            document.getElementById('formRegistro').reset();
+            document.getElementById('fecha').valueAsDate = new Date();
+            document.getElementById('tarifaMOHoraActual').value = tarifas.manoObraHora;
+            document.getElementById('previewCostos').style.display = 'none';
+            document.getElementById('codigoPieza').style.backgroundColor = '';
+            document.getElementById('codigoPieza').style.borderColor = '';
+            tarifaTemporal = tarifas.manoObraHora;
+            
+            // 🎉 Feedback visual
+            const btn = event.target.querySelector('button[type="submit"]');
+            const original = btn.innerHTML;
+            btn.innerHTML = '<span class="text-2xl">✅</span> ¡Guardado!';
+            btn.classList.add('bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = original;
+                btn.classList.remove('bg-green-600');
+            }, 2000);
+
+            // Scroll al historial
+            document.getElementById('historialContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // 🗑️ ELIMINAR REGISTRO
+        function eliminarRegistro(id) {
+            if (!confirm('¿Está seguro de eliminar este registro permanente?')) return;
+            localStorage.removeItem(`reproceso:${id}`);
+            cargarDatos();
+        }
+
+        // 📊 EXPORTAR EXCEL
+        function descargarExcel() {
+            if (registros.length === 0) {
+                alert('⚠️ No hay registros para exportar');
+                return;
+            }
+            const headers = ['Cliente','Origen','Motivo NC','Lotes','Sección','Unid.Rev.','Fecha','Tipo','Código','Pieza','Cant.','Operarios','Horas','Tarifa MO','Costo MO','Costo Unit.','Costo Piezas','Materiales','Total','Observaciones'];
+            const rows = registros.map(r => [
+                r.cliente||'',r.origenHallazgo||'',r.motivoNoConformidad||'',r.lotesAfectados||'',r.seccionOrigenProblema||'',
+                r.unidadesRevisar||0,r.fecha,r.tipoReproceso,r.codigoPieza,r.nombrePieza,r.cantidad,r.operarios,
+                r.tiempoHoras,r.tarifaManoObraHora||0,r.costoManoObra||0,r.costoUnitarioPieza||0,r.costoPiezas||0,
+                r.costoMateriales||0,r.costoTotal,r.descripcion||''
+            ]);
+            const csv = [headers.join(','),...rows.map(row=>row.map(cell=>`"${cell}"`).join(','))].join('\n');
+            const blob = new Blob(['\ufeff'+csv], {type: 'text/csv;charset=utf-8;'}); 
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `reprocesos_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        // 💵 FORMATO MONEDA COLOMBIANA
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('es-CO', {
+                style: 'currency', currency: 'COP',
+                minimumFractionDigits: 0, maximumFractionDigits: 0
+            }).format(parseFloat(value || 0)).replace('COP', '$');
+        }
+    </script>
+</body>
+</html>
