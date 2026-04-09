@@ -53,6 +53,14 @@
             </div>
         </div>
 
+
+
+
+
+
+
+
+
         <!-- 📊 DASHBOARD DE ESTADÍSTICAS -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             <div class="card-stats bg-gradient-to-br from-emerald-500 to-green-600 text-white p-8 rounded-2xl shadow-xl">
@@ -243,6 +251,28 @@
                         </div>
                     </div>
 
+<!-- CAMPOS OPERARIOS Y PIEZAS -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">CODIGOS OPERARIOS QUE INSPECCIONAN O REPROCESAN</label>
+        <input type="text" id="operariosInspeccion" placeholder="Ej: OP001,OP002" class="w-full p-3 border border-emerald-300 rounded-xl focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">CODIGO OPERARIO IMPLICADO</label>
+        <input type="text" id="operarioImplicado" placeholder="Ej: OP123" class="w-full p-3 border border-emerald-300 rounded-xl focus:ring-4 focus:ring-emerald-100 transition-all font-semibold">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">PIEZAS BUENAS</label>
+        <input type="number" id="piezasBuenas" min="0" class="w-full p-3 border border-emerald-300 rounded-xl focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right">
+    </div>
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">PIEZAS REPROCESADAS</label>
+        <input type="number" id="piezasReprocesadas" min="0" class="w-full p-3 border border-emerald-300 rounded-xl focus:ring-4 focus:ring-emerald-100 transition-all font-semibold text-right">
+    </div>
+</div>
+
+
+
                     <!-- 📝 OBSERVACIONES -->
                     <div class="input-group">
                         <h3 class="text-xl font-bold text-emerald-800 mb-6 flex items-center">
@@ -275,11 +305,18 @@
                         <div class="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl flex items-center justify-center text-2xl mr-4 shadow-lg">📋</div>
                         <h2 class="text-3xl font-black text-gray-900">Historial Completo</h2>
                     </div>
-                    <button onclick="descargarExcel()" id="btnDescargar"
-                        class="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transform transition-all duration-300 flex items-center space-x-2">
-                        <span>📥</span>
-                        <span>Descargar Excel</span>
-                    </button>
+                    <div class="flex gap-3 flex-wrap">
+                        <button onclick="descargarExcel()" id="btnDescargar"
+                            class="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transform transition-all duration-300 flex items-center space-x-2">
+                            <span>📥</span>
+                            <span>Descargar Excel</span>
+                        </button>
+                        <button onclick="limpiarTodo()"
+                            class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-black py-4 px-8 rounded-xl shadow-xl hover:shadow-2xl hover:scale-105 transform transition-all duration-300 flex items-center space-x-2">
+                            <span>🗑️</span>
+                            <span>Limpiar Todo</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="historialContainer" class="overflow-hidden">
@@ -1374,77 +1411,89 @@
             document.getElementById('statPromedio').textContent = cantidad > 0 ? formatCurrency(total / cantidad) : '$0';
         }
 
-        // 📋 TABLA HISTORIAL
-        function actualizarHistorial() {
-            const container = document.getElementById('historialContainer');
-            if (registros.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center py-20 text-gray-400">
-                        <div class="text-8xl mb-8 mx-auto">📦</div>
-                        <p class="text-2xl font-semibold mb-2">Sin registros aún</p>
-                        <p class="text-lg">Agregue el primer reproceso para comenzar</p>
-                    </div>
-                `;
-                return;
-            }
+       // 📋 TABLA HISTORIAL
+function actualizarHistorial() {
+    const container = document.getElementById('historialContainer');
+    if (registros.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-20 text-gray-400">
+                <div class="text-8xl mb-8 mx-auto">📦</div>
+                <p class="text-2xl font-semibold mb-2">Sin registros aún</p>
+                <p class="text-lg">Agregue el primer reproceso para comenzar</p>
+            </div>
+        `;
+        return;
+    }
 
-            container.innerHTML = `
-                <div class="overflow-x-auto rounded-2xl border-2 border-emerald-200">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
-                            <tr>
-                                <th class="p-4 text-left font-black rounded-tl-xl">Cliente</th>
-                                <th class="p-4 text-left font-black">Origen</th>
-                                <th class="p-4 text-left font-black">Motivo NC</th>
-                                <th class="p-4 text-left font-black">Lotes</th>
-                                <th class="p-4 text-left font-black">Sección</th>
-                                <th class="p-4 text-left font-black">Unid.Rev.</th>
-                                <th class="p-4 text-left font-black">Fecha</th>
-                                <th class="p-4 text-left font-black">Tipo</th>
-                                <th class="p-4 text-left font-black">Código</th>
-                                <th class="p-4 text-left font-black">Pieza</th>
-                                <th class="p-4 text-center font-black">Cant.</th>
-                                <th class="p-4 text-right font-black">Unit.</th>
-                                <th class="p-4 text-right font-black">Piezas</th>
-                                <th class="p-4 text-right font-black">M.O.</th>
-                                <th class="p-4 text-right font-black">Mat.</th>
-                                <th class="p-4 text-right font-black rounded-tr-xl">Total</th>
-                                <th class="p-4 text-center font-black">🗑️</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${registros.map((registro, index) => `
-                                <tr class="${index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-white'} hover:bg-emerald-100 transition-all border-b border-emerald-100">
-                                    <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.cliente || ''}">${registro.cliente || '-'}</td>
-                                    <td class="p-4 max-w-[140px] truncate" title="${registro.origenHallazgo || ''}">${registro.origenHallazgo || '-'}</td>
-                                    <td class="p-4 max-w-[140px] truncate" title="${registro.motivoNoConformidad || ''}">${registro.motivoNoConformidad || '-'}</td>
-                                    <td class="p-4 max-w-[120px] truncate" title="${registro.lotesAfectados || ''}">${registro.lotesAfectados || '-'}</td>
-                                    <td class="p-4 max-w-[120px] truncate" title="${registro.seccionOrigenProblema || ''}">${registro.seccionOrigenProblema || '-'}</td>
-                                    <td class="p-4 text-center font-semibold">${registro.unidadesRevisar || '-'}</td>
-                                    <td class="p-4 font-semibold">${registro.fecha}</td>
-                                    <td class="p-4">
-                                        <span class="bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">
-                                            ${registro.tipoReproceso || '-'}
-                                        </span>
-                                    </td>
-                                    <td class="p-4 font-mono font-semibold text-emerald-700">${registro.codigoPieza || '-'}</td>
-                                    <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.nombrePieza}">${registro.nombrePieza || '-'}</td>
-                                    <td class="p-4 text-center font-bold text-lg">${registro.cantidad || 0}</td>
-                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoUnitarioPieza || 0)}</td>
-                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoPiezas || 0)}</td>
-                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoManoObra || 0)}</td>
-                                    <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoMateriales || 0)}</td>
-                                    <td class="p-4 text-right font-black text-2xl text-emerald-700">${formatCurrency(registro.costoTotal || 0)}</td>
-                                    <td class="p-4 text-center">
-                                        <button onclick="eliminarRegistro('${registro.id}')" class="text-red-500 hover:text-red-700 text-2xl hover:scale-110 transition-all p-2 rounded-xl hover:bg-red-100">🗑️</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
+    container.innerHTML = `
+        <div class="overflow-x-auto rounded-2xl border-2 border-emerald-200">
+            <table class="w-full text-sm">
+                <thead class="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
+                    <tr>
+                        <th class="p-4 text-left font-black rounded-tl-xl">Cliente</th>
+                        <th class="p-4 text-left font-black">Origen</th>
+                        <th class="p-4 text-left font-black">Motivo NC</th>
+                        <th class="p-4 text-left font-black">Lotes</th>
+                        <th class="p-4 text-left font-black">Sección</th>
+                        <th class="p-4 text-left font-black">Unid.Rev.</th>
+                        <th class="p-4 text-left font-black">Fecha</th>
+                        <th class="p-4 text-left font-black">Tipo</th>
+                        <th class="p-4 text-left font-black">Código</th>
+                        <th class="p-4 text-left font-black">Pieza</th>
+                        <th class="p-4 text-center font-black">Cant.</th>
+                        <th class="p-4 text-right font-black">Unit.</th>
+                        <th class="p-4 text-right font-black">Piezas</th>
+                        <th class="p-4 text-right font-black">M.O.</th>
+                        <th class="p-4 text-right font-black">Mat.</th>
+                        <th class="p-4 text-right font-black">Total</th>
+                        <!-- 👇 NUEVAS COLUMNAS PARA EXPORT EXCEL -->
+                        <th class="p-3 text-left font-black whitespace-nowrap">Ops.Inspect</th>
+                        <th class="p-3 text-left font-black whitespace-nowrap">Op.Implicado</th>
+                        <th class="p-3 text-center font-black">Pzs.Buenas</th>
+                        <th class="p-3 text-center font-black rounded-tr-xl">Pzs.Reproc.</th>
+                        <!-- 👆 FIN NUEVAS -->
+                    </tr>
+                </thead>
+                <tbody>
+                    ${registros.map((registro, index) => `
+                        <tr class="${index % 2 === 0 ? 'bg-emerald-50/50' : 'bg-white'} hover:bg-emerald-100 transition-all border-b border-emerald-100">
+                            <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.cliente || ''}">${registro.cliente || '-'}</td>
+                            <td class="p-4 max-w-[140px] truncate" title="${registro.origenHallazgo || ''}">${registro.origenHallazgo || '-'}</td>
+                            <td class="p-4 max-w-[140px] truncate" title="${registro.motivoNoConformidad || ''}">${registro.motivoNoConformidad || '-'}</td>
+                            <td class="p-4 max-w-[120px] truncate" title="${registro.lotesAfectados || ''}">${registro.lotesAfectados || '-'}</td>
+                            <td class="p-4 max-w-[120px] truncate" title="${registro.seccionOrigenProblema || ''}">${registro.seccionOrigenProblema || '-'}</td>
+                            <td class="p-4 text-center font-semibold">${registro.unidadesRevisar || '-'}</td>
+                            <td class="p-4 font-semibold">${registro.fecha}</td>
+                            <td class="p-4">
+                                <span class="bg-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">
+                                    ${registro.tipoReproceso || '-'}
+                                </span>
+                            </td>
+                            <td class="p-4 font-mono font-semibold text-emerald-700">${registro.codigoPieza || '-'}</td>
+                            <td class="p-4 font-semibold max-w-[120px] truncate" title="${registro.nombrePieza}">${registro.nombrePieza || '-'}</td>
+                            <td class="p-4 text-center font-bold text-lg">${registro.cantidad || 0}</td>
+                            <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoUnitarioPieza || 0)}</td>
+                            <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoPiezas || 0)}</td>
+                            <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoManoObra || 0)}</td>
+                            <td class="p-4 text-right font-semibold">${formatCurrency(registro.costoMateriales || 0)}</td>
+                            <td class="p-4 text-right font-black text-2xl text-emerald-700">${formatCurrency(registro.costoTotal || 0)}</td>
+                            <!-- 👇 DATOS NUEVAS COLUMNAS -->
+                            <td class="p-3 font-mono text-xs max-w-[100px] truncate" title="${registro.operariosInspeccion || ''}">${registro.operariosInspeccion || '-'}</td>
+                            <td class="p-3 font-mono text-xs max-w-[80px] truncate" title="${registro.operarioImplicado || ''}">${registro.operarioImplicado || '-'}</td>
+                            <td class="p-3 text-center font-semibold">${registro.piezasBuenas || 0}</td>
+                            <td class="p-3 text-center font-bold text-emerald-700">${registro.piezasReprocesadas || 0}</td>
+                            <!-- 👆 FIN NUEVAS -->
+                            <td class="p-4 text-center">
+                                <button onclick="editarRegistro(${index})" class="mr-2 text-blue-500 hover:text-blue-700 text-xl hover:scale-110 transition-all p-2 rounded-xl hover:bg-blue-100">✏️</button>
+                                <button onclick="eliminarRegistro('${registro.id}')" class="text-red-500 hover:text-red-700 text-2xl hover:scale-110 transition-all p-2 rounded-xl hover:bg-red-100">🗑️</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
 
         // 🧮 CÁLCULO AUTOMÁTICO
         function calcularPreview() {
@@ -1476,129 +1525,172 @@
             }
         }
 
-        // 💾 GUARDAR REGISTRO
-        function guardarRegistro(event) {
-            event.preventDefault();
-            
-            // Obtener valores directamente del formulario
-            const cliente = document.getElementById('cliente').value.trim();
-            const origenHallazgo = document.getElementById('origenHallazgo').value;
-            const motivoNoConformidad = document.getElementById('motivoNoConformidad').value.trim();
-            const lotesAfectados = document.getElementById('lotesAfectados').value.trim();
-            const seccionOrigenProblema = document.getElementById('seccionOrigenProblema').value.trim();
-            const unidadesRevisar = parseInt(document.getElementById('unidadesRevisar').value) || 0;
-            const fecha = document.getElementById('fecha').value;
-            const tipoReproceso = document.getElementById('tipoReproceso').value;
-            const codigoPieza = document.getElementById('codigoPieza').value.trim();
-            const nombrePieza = document.getElementById('nombrePieza').value.trim();
-            const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
-            const operarios = parseInt(document.getElementById('operarios').value) || 0;
-            const tiempoHoras = parseFloat(document.getElementById('tiempoHoras').value) || 0;
-            const costoUnitarioPieza = parseFloat(document.getElementById('costoUnitarioPieza').value) || 0;
-            const costoMateriales = parseFloat(document.getElementById('costoMateriales').value) || 0;
-            const tarifaFinal = parseFloat(document.getElementById('tarifaMOHoraActual').value) || tarifas.manoObraHora;
-            const descripcion = document.getElementById('descripcion').value.trim();
-            
-            // Calcular costos
-            const costoPiezas = costoUnitarioPieza * cantidad;
-            const costoManoObra = tarifaFinal * tiempoHoras * operarios;
-            const costoTotal = costoManoObra + costoPiezas + costoMateriales;
+// 💾 GUARDAR REGISTRO
+function guardarRegistro(event) {
+    event.preventDefault();
+    
+    // Obtener valores directamente del formulario
+    const cliente = document.getElementById('cliente').value.trim();
+    const origenHallazgo = document.getElementById('origenHallazgo').value;
+    const motivoNoConformidad = document.getElementById('motivoNoConformidad').value.trim();
+    const lotesAfectados = document.getElementById('lotesAfectados').value.trim();
+    const seccionOrigenProblema = document.getElementById('seccionOrigenProblema').value.trim();
+    const unidadesRevisar = parseInt(document.getElementById('unidadesRevisar').value) || 0;
+    const fecha = document.getElementById('fecha').value;
+    const tipoReproceso = document.getElementById('tipoReproceso').value;
+    const codigoPieza = document.getElementById('codigoPieza').value.trim();
+    const nombrePieza = document.getElementById('nombrePieza').value.trim();
+    const cantidad = parseInt(document.getElementById('cantidad').value) || 0;
+    const operarios = parseInt(document.getElementById('operarios').value) || 0;
+    const tiempoHoras = parseFloat(document.getElementById('tiempoHoras').value) || 0;
+    const costoUnitarioPieza = parseFloat(document.getElementById('costoUnitarioPieza').value) || 0;
+    const costoMateriales = parseFloat(document.getElementById('costoMateriales').value) || 0;
+    const tarifaFinal = parseFloat(document.getElementById('tarifaMOHoraActual').value) || tarifas.manoObraHora;
+    const descripcion = document.getElementById('descripcion').value.trim();
+    
+    // 👇 NUEVOS CAMPOS
+    const operariosInspeccion = document.getElementById('operariosInspeccion').value.trim() || '';
+    const operarioImplicado = document.getElementById('operarioImplicado').value.trim() || '';
+    const piezasBuenas = parseInt(document.getElementById('piezasBuenas').value) || 0;
+    const piezasReprocesadas = parseInt(document.getElementById('piezasReprocesadas').value) || 0;
+    // 👆
+    
+    // Calcular costos
+    const costoPiezas = costoUnitarioPieza * cantidad;
+    const costoManoObra = tarifaFinal * tiempoHoras * operarios;
+    const costoTotal = costoManoObra + costoPiezas + costoMateriales;
 
-            const nuevoRegistro = {
-                id: Date.now().toString(),
-                cliente,
-                origenHallazgo,
-                motivoNoConformidad,
-                lotesAfectados,
-                seccionOrigenProblema,
-                unidadesRevisar,
-                fecha,
-                tipoReproceso,
-                codigoPieza,
-                nombrePieza,
-                cantidad,
-                operarios,
-                tiempoHoras,
-                costoUnitarioPieza,
-                tarifaManoObraHora: tarifaFinal,
-                costoPiezas,
-                costoManoObra,
-                costoMateriales,
-                costoTotal,
-                descripcion
-            };
+    const nuevoRegistro = {
+        id: Date.now().toString(),
+        cliente,
+        origenHallazgo,
+        motivoNoConformidad,
+        lotesAfectados,
+        seccionOrigenProblema,
+        unidadesRevisar,
+        fecha,
+        tipoReproceso,
+        codigoPieza,
+        nombrePieza,
+        cantidad,
+        operarios,
+        tiempoHoras,
+        costoUnitarioPieza,
+        tarifaManoObraHora: tarifaFinal,
+        costoPiezas,
+        costoManoObra,
+        costoMateriales,
+        costoTotal,
+        descripcion,
+        // 👇 CAMPOS NUEVOS GUARDADOS
+        operariosInspeccion,
+        operarioImplicado,
+        piezasBuenas,
+        piezasReprocesadas
+        // 👆
+    };
 
-            // Guardar en localStorage
-            try {
-                localStorage.setItem(`reproceso:${nuevoRegistro.id}`, JSON.stringify(nuevoRegistro));
-                console.log('Registro guardado:', nuevoRegistro);
-            } catch(error) {
-                console.error('Error al guardar:', error);
-                alert('Error al guardar el registro. Por favor intente nuevamente.');
-                return;
-            }
+    // Guardar en localStorage
+    try {
+        localStorage.setItem(`reproceso:${nuevoRegistro.id}`, JSON.stringify(nuevoRegistro));
+        console.log('✅ Registro guardado COMPLETO:', nuevoRegistro);
+    } catch(error) {
+        console.error('Error al guardar:', error);
+        alert('Error al guardar el registro. Por favor intente nuevamente.');
+        return;
+    }
 
-            // Recargar datos y actualizar UI
-            cargarDatos();
-            
-            // Resetear formulario
-            document.getElementById('formRegistro').reset();
-            document.getElementById('fecha').valueAsDate = new Date();
-            document.getElementById('tarifaMOHoraActual').value = tarifas.manoObraHora;
-            document.getElementById('previewCostos').style.display = 'none';
-            document.getElementById('codigoPieza').style.backgroundColor = '';
-            document.getElementById('codigoPieza').style.borderColor = '';
-            tarifaTemporal = tarifas.manoObraHora;
-            
-            // 🎉 Feedback visual
-            const btn = event.target.querySelector('button[type="submit"]');
-            const original = btn.innerHTML;
-            btn.innerHTML = '<span class="text-2xl">✅</span> ¡Guardado!';
-            btn.classList.add('bg-green-600');
-            setTimeout(() => {
-                btn.innerHTML = original;
-                btn.classList.remove('bg-green-600');
-            }, 2000);
+    // Recargar datos y actualizar UI
+    cargarDatos();
+    
+    // Resetear formulario
+    document.getElementById('formRegistro').reset();
+    document.getElementById('fecha').valueAsDate = new Date();
+    document.getElementById('tarifaMOHoraActual').value = tarifas.manoObraHora;
+    document.getElementById('previewCostos').style.display = 'none';
+    document.getElementById('codigoPieza').style.backgroundColor = '';
+    document.getElementById('codigoPieza').style.borderColor = '';
+    tarifaTemporal = tarifas.manoObraHora;
+    
+    // 🎉 Feedback visual
+    const btn = event.target.querySelector('button[type="submit"]');
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span class="text-2xl">✅</span> ¡Guardado!';
+    btn.classList.add('bg-green-600');
+    setTimeout(() => {
+        btn.innerHTML = original;
+        btn.classList.remove('bg-green-600');
+    }, 2000);
 
-            // Scroll al historial
-            document.getElementById('historialContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+    // Scroll al historial
+    document.getElementById('historialContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
-        // 🗑️ ELIMINAR REGISTRO
-        function eliminarRegistro(id) {
-            if (!confirm('¿Está seguro de eliminar este registro permanente?')) return;
-            localStorage.removeItem(`reproceso:${id}`);
-            cargarDatos();
-        }
+// 🗑️ ELIMINAR REGISTRO
+function eliminarRegistro(id) {
+    if (!confirm('¿Está seguro de eliminar este registro?')) return;
+    localStorage.removeItem(`reproceso:${id}`);
+    cargarDatos();
+}
 
-        // 📊 EXPORTAR EXCEL
-        function descargarExcel() {
-            if (registros.length === 0) {
-                alert('⚠️ No hay registros para exportar');
-                return;
-            }
-            const headers = ['Cliente','Origen','Motivo NC','Lotes','Sección','Unid.Rev.','Fecha','Tipo','Código','Pieza','Cant.','Operarios','Horas','Tarifa MO','Costo MO','Costo Unit.','Costo Piezas','Materiales','Total','Observaciones'];
-            const rows = registros.map(r => [
-                r.cliente||'',r.origenHallazgo||'',r.motivoNoConformidad||'',r.lotesAfectados||'',r.seccionOrigenProblema||'',
-                r.unidadesRevisar||0,r.fecha,r.tipoReproceso,r.codigoPieza,r.nombrePieza,r.cantidad,r.operarios,
-                r.tiempoHoras,r.tarifaManoObraHora||0,r.costoManoObra||0,r.costoUnitarioPieza||0,r.costoPiezas||0,
-                r.costoMateriales||0,r.costoTotal,r.descripcion||''
-            ]);
-            const csv = [headers.join(','),...rows.map(row=>row.map(cell=>`"${cell}"`).join(','))].join('\n');
-            const blob = new Blob(['\ufeff'+csv], {type: 'text/csv;charset=utf-8;'}); 
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = `reprocesos_${new Date().toISOString().split('T')[0]}.csv`;
-            link.click();
-        }
+// 🧹 LIMPIAR TODOS LOS REGISTROS
+function limpiarTodo() {
+    if (registros.length === 0) { alert('No hay registros para eliminar.'); return; }
+    if (!confirm(`¿Eliminar TODOS los ${registros.length} registros? Esta acción no se puede deshacer.`)) return;
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('reproceso:')) keys.push(key);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+    cargarDatos();
+}
 
-        // 💵 FORMATO MONEDA COLOMBIANA
-        function formatCurrency(value) {
-            return new Intl.NumberFormat('es-CO', {
-                style: 'currency', currency: 'COP',
-                minimumFractionDigits: 0, maximumFractionDigits: 0
-            }).format(parseFloat(value || 0)).replace('COP', '$');
-        }
+// 📊 EXPORTAR EXCEL
+function descargarExcel() {
+    if (registros.length === 0) { alert('⚠️ No hay registros para exportar'); return; }
+
+    const escapar = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+
+    const headers = [
+        'Cliente','Origen Hallazgo','Motivo No Conformidad','Lotes Afectados','Sección Origen Problema',
+        'Unidades a Revisar','Fecha','Tipo Reproceso','Código Pieza','Nombre Pieza','Cantidad Piezas',
+        'Operarios','Horas','Tarifa MO/Hora','Costo Mano Obra','Costo Unitario Pieza',
+        'Costo Piezas','Costo Materiales','Costo Total','Observaciones',
+        'Códigos Operarios Inspección','Código Operario Implicado','Piezas Buenas','Piezas Reprocesadas'
+    ];
+
+    const filas = registros.map(r => [
+        r.cliente||'', r.origenHallazgo||'', r.motivoNoConformidad||'', r.lotesAfectados||'',
+        r.seccionOrigenProblema||'', r.unidadesRevisar||0, r.fecha||'', r.tipoReproceso||'',
+        r.codigoPieza||'', r.nombrePieza||'', r.cantidad||0, r.operarios||0,
+        r.tiempoHoras||0, r.tarifaManoObraHora||0, r.costoManoObra||0, r.costoUnitarioPieza||0,
+        r.costoPiezas||0, r.costoMateriales||0, r.costoTotal||0, r.descripcion||'',
+        r.operariosInspeccion||'', r.operarioImplicado||'', r.piezasBuenas||0, r.piezasReprocesadas||0
+    ]);
+
+    const lineas = [
+        headers.map(escapar).join(','),
+        ...filas.map(fila => fila.map(escapar).join(','))
+    ];
+
+    const blob = new Blob(['\ufeff' + lineas.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `reprocesos_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+// 💵 FORMATO MONEDA COLOMBIANA
+function formatCurrency(value) {
+    return new Intl.NumberFormat('es-CO', {
+        style: 'currency', currency: 'COP',
+        minimumFractionDigits: 0, maximumFractionDigits: 0
+    }).format(parseFloat(value || 0)).replace('COP', '$');
+}
     </script>
 </body>
 </html>
