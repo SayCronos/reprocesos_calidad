@@ -244,8 +244,7 @@
           <option value="">Seleccionar...</option>
           <option>Cliente Externo</option>
           <option>Cliente Interno</option>
-          <option>Bodega</option>
-          <option>Riduco</option>
+          <option>Bodega Riduco</option>
           <option>En Proceso</option>
         </select>
       </div>
@@ -255,7 +254,7 @@
       </div>
     </div>
 
-    <div class="form-grid g3">
+    <div class="form-grid g4">
       <div>
         <label for="f-motivo">Motivo No Conformidad <span class="req">*</span></label>
         <textarea id="f-motivo" placeholder="Describe el motivo de la no conformidad..."></textarea>
@@ -267,6 +266,10 @@
       <div>
         <label for="f-seccion">Sección Origen Problema <span class="req">*</span></label>
         <input type="text" id="f-seccion" placeholder="Ej: Línea A, Ensamble, Pintura...">
+      </div>
+      <div>
+        <label for="f-maquina">Máquina o Línea <span class="req">*</span></label>
+        <input type="text" id="f-maquina" placeholder="Ej: Máquina 5, Línea B...">
       </div>
     </div>
 
@@ -365,6 +368,7 @@
             <th>Defecto</th>
             <th>Lotes Afectados</th>
             <th>Sección Origen</th>
+            <th>Máquina o Línea</th>
             <th>Cantidad a Inspeccionar</th>
             <th>Fecha</th>
             <th>Trabajo a Realizar</th>
@@ -390,7 +394,7 @@
 
   <div style="display:flex; justify-content:flex-end; margin-bottom:1.5rem;">
     <div style="border:2px solid #1a1a2e; border-radius:8px; padding:10px 24px; display:inline-block;">
-      <span style="font-weight:700; font-size:15px; letter-spacing:0.05em; color:#1a1a2e;">QF CC 86-06</span>
+      <span style="font-weight:700; font-size:15px; letter-spacing:0.05em; color:#1a1a2e;">QF CC 472-00</span>
     </div>
   </div>
 
@@ -406,7 +410,7 @@
   let registros = [];
 
   const CAMPOS = [
-    'f-cliente','f-origen','f-fecha','f-motivo','f-defecto','f-seccion',
+    'f-cliente','f-origen','f-fecha','f-motivo','f-defecto','f-seccion','f-maquina',
     'f-lotes','f-unidades','f-tipo','f-orden','f-codpieza','f-nompieza',
     'f-buenas','f-malas','f-reprocesadas','f-horas','f-opinsp','f-opimpl'
   ];
@@ -476,6 +480,7 @@
       defecto:       val('f-defecto'),
       lotes:         val('f-lotes'),
       seccion:       val('f-seccion'),
+      maquina:       val('f-maquina'),
       unidades:      numVal('f-unidades'),
       fecha:         val('f-fecha'),
       tipo:          val('f-tipo'),
@@ -537,6 +542,7 @@
         <td title="${r.defecto}">${r.defecto}</td>
         <td>${r.lotes}</td>
         <td>${r.seccion}</td>
+        <td>${r.maquina}</td>
         <td>${r.unidades}</td>
         <td>${r.fecha}</td>
         <td>${r.tipo}</td>
@@ -567,6 +573,7 @@
       { header: 'Orden de Producción', key: 'orden', width: 18 },
       { header: 'Cantidad a Inspeccionar', key: 'unidades', width: 18 },
       { header: 'Sección Origen Problema', key: 'seccion', width: 22 },
+      { header: 'Máquina o Línea', key: 'maquina', width: 18 },
       { header: 'Fecha', key: 'fecha', width: 12 },
       { header: 'Trabajo a Realizar', key: 'tipo', width: 22 },
       { header: 'Código Pieza', key: 'codpieza', width: 14 },
@@ -603,6 +610,7 @@
         orden: r.orden,
         unidades: r.unidades,
         seccion: r.seccion,
+        maquina: r.maquina,
         fecha: r.fecha,
         tipo: r.tipo,
         codpieza: r.codpieza,
@@ -620,7 +628,7 @@
     sheet.addRow([]);
 
     // Fila de código en negrilla
-    const filaCodigo = sheet.addRow(['QF CC 86-06']);
+    const filaCodigo = sheet.addRow(['QF CC 472-00']);
     filaCodigo.getCell(1).font = { bold: true, size: 12 };
     sheet.mergeCells(filaCodigo.number, 1, filaCodigo.number, 4);
 
